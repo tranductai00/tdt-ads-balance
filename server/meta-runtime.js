@@ -3262,6 +3262,12 @@ exports.metaBridge = onRequest({
       throw error;
     }
 
+    // v7.0.2: Meta-only refactor accidentally removed these request-scoped values.
+    // Every device/workspace/Meta action below depends on them.
+    const workspace = normalizeWorkspace(body.workspace || req.query.workspace);
+    const syncKey = String(body.syncKey || req.query.key || "");
+    const deviceName = String(body.deviceName || req.headers["x-device-name"] || "").trim().slice(0, 80);
+
     if (action === "deviceStatus") {
       const connectionRef = db.collection(CONNECTIONS).doc(workspace);
       let snap = await connectionRef.get();

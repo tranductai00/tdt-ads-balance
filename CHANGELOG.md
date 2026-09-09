@@ -1,3 +1,10 @@
+# v7.0.2
+
+- Fix `workspace is not defined` trong `metaBridge`.
+- Khôi phục request-scope `workspace`, `syncKey`, `deviceName` sau refactor Meta-only.
+- Thêm regression test gọi trực tiếp `metaBridge` để lỗi này không tái diễn.
+- Không thay đổi database/schema và không khôi phục Outlook/AdsCheck runtime.
+
 # Changelog
 
 ## v7.0.0 — Meta API Only

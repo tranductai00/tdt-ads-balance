@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-only",
-  "version": "7.0.1",
+  "version": "7.0.2",
   "private": true,
-  "description": "T Balance v7.0.1 Meta-only - fix undefined updateNotificationStatus during boot",
+  "description": "T Balance v7.0.2 Meta-only - fix workspace/syncKey/deviceName request scope in metaBridge",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
@@ -12,7 +12,7 @@
     "check": "node --check server.js && node --check server/store.js && node --check server/meta-runtime.js && node --check api/metaBridge.js && node --check api/healthz.js && node --check public/push-sw.js",
     "token-key": "node scripts/generate-token-key.js",
     "vapid:generate": "node scripts/generate-vapid-keys.js",
-    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_manual_ad_edit.js"
+    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_manual_ad_edit.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_bridge_scope.js"
   },
   "dependencies": {
     "express": "^5.1.0",
