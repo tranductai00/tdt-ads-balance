@@ -3159,7 +3159,9 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
     const workspaceRecord = await getWorkspaceSnapshot(transaction, workspace);
     const stateSnap = await transaction.get(stateRef);
     const previousState = stateSnap.exists ? (stateSnap.data() || {}) : {};
-    const settings = adsCheckSettings(previousState.settings || DEFAULT_ADSCHECK_SETTINGS);
+    const settings = isMetaApi
+      ? adsCheckSettings(previousState.settings || DEFAULT_ADSCHECK_SETTINGS)
+      : adsCheckSettings(previousState.adsCheckV6Settings || previousState.settings || DEFAULT_ADSCHECK_SETTINGS);
     if (!settings.enabled) {
       transaction.set(stateRef, {
         settings,
@@ -3232,12 +3234,17 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
       }
       if (settings.updateThreshold && !ad.manualThresholdOverride && scanned.threshold > 0) ad.threshold = scanned.threshold;
       if (!ad.manualNameOverride && scanned.name && (!ad.name || ["adscheck_smit", "meta_api"].includes(ad.createdFrom))) ad.name = scanned.name;
-      ad.adsCheckBalance = scanned.balance; // field legacy để dashboard v5.6 tiếp tục hoạt động
+      ad.adsCheckBalance = scanned.balance; // realtime UI source from AdsCheck V6 when available
       ad.adsCheckSelected = true;
       ad.remainingThreshold = isMetaApi
         ? Math.max(0, cleanPositiveNumber(ad.threshold) - scanned.balance)
-        : scanned.remainingThreshold;
+        : (scanned.remainingThreshold || Math.max(0, cleanPositiveNumber(ad.threshold || scanned.threshold) - scanned.balance));
       if (scanned.cardLast4 || !isMetaApi) ad.paymentCardLast4 = scanned.cardLast4;
+      if (!isMetaApi && scanned.cardBrand) ad.paymentCardBrand = scanned.cardBrand;
+      if (!isMetaApi && scanned.nextBillingDate) ad.billingNextDate = scanned.nextBillingDate;
+      if (!isMetaApi && scanned.nextBillingDateText) ad.billingNextDateText = scanned.nextBillingDateText;
+      if (!isMetaApi && scanned.threshold > 0 && !ad.manualThresholdOverride) ad.metaThresholdSource = "adscheck_v6";
+      if (!isMetaApi) ad.adsCheckV6LastSyncAt = nowIso;
       ad.adsCheckStatus = scanned.status;
       ad.adsCheckOwnerId = scanned.ownerId;
       ad.adsCheckLimit = scanned.limit;
@@ -3256,7 +3263,11 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
         threshold: isMetaApi ? cleanPositiveNumber(ad.threshold) : scanned.threshold,
         remainingThreshold: ad.remainingThreshold,
         cardLast4: scanned.cardLast4 || ad.paymentCardLast4 || "",
+        cardBrand: scanned.cardBrand || ad.paymentCardBrand || "",
         paymentMethodText: scanned.paymentMethodText,
+        nextBillingDate: scanned.nextBillingDate || ad.billingNextDate || "",
+        nextBillingDateText: scanned.nextBillingDateText || ad.billingNextDateText || "",
+        thresholdSource: isMetaApi ? (ad.metaThresholdSource || scanned.thresholdSource || "meta_api") : "adscheck_v6",
         ownerId: scanned.ownerId,
         limit: scanned.limit,
         currency: scanned.currency,
@@ -3328,6 +3339,7 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
     transaction.set(workspaceRecord.ref, { payload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     transaction.set(stateRef, {
       settings,
+      ...(isMetaApi ? {} : { adsCheckV6Settings: settings }),
       lastAttemptAt: FieldValue.serverTimestamp(),
       lastAttemptAtMs: serverReceivedAtMs,
       lastSyncAt: FieldValue.serverTimestamp(),
@@ -3651,6 +3663,7 @@ exports.metaBridge = onRequest({
     const metaOnlyActions = new Set([
       "deviceStatus", "listDevices", "removeDevice", "removeOtherDevices", "createPairingCode", "joinDevice",
       "adAccountManualUpdate", "adAccountSetFundingSource", "workspaceGet", "workspaceSet",
+      "adsCheckV6Status", "adsCheckV6Configure", "adsCheckV6Sync",
       "metaApiStatus", "metaApiConfigure", "metaApiSync",
       "metaBillingStatus", "metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "metaBillingSync",
       "googleSheetsStatus", "googleSheetsCredentialsConfigure", "googleSheetsAuthUrl", "googleSheetsDisconnect",
@@ -4012,6 +4025,69 @@ exports.metaBridge = onRequest({
     if (action === "googleSheetsFillAll") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
       return sendJson(res, 200, { ok: true, ...(await googleSheets.fillAll(workspace, body)) });
+    }
+
+    if (action === "adsCheckV6Status") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const stateSnap = await db.collection(META_STATES).doc(workspace).get();
+      const state = stateSnap.exists ? (stateSnap.data() || {}) : {};
+      const lastSyncAtMs = Number(state.adsCheckV6LastSyncAtMs || (state.sourceType === "adscheck" ? state.lastSyncAtMs : 0) || 0);
+      const ageMs = lastSyncAtMs ? Math.max(0, Date.now() - lastSyncAtMs) : 0;
+      return sendJson(res, 200, {
+        ok: true,
+        connected: true,
+        healthy: !!lastSyncAtMs && ageMs < 10 * 60 * 1000,
+        ageMs,
+        settings: adsCheckSettings(state.adsCheckV6Settings || state.settings || DEFAULT_ADSCHECK_SETTINGS),
+        accountCount: Number(state.adsCheckV6AccountCount || (state.sourceType === "adscheck" ? state.accountCount : 0) || 0),
+        discoveredCount: Number(state.adsCheckV6DiscoveredCount || 0),
+        selectedCount: Number(state.adsCheckV6SelectedCount || 0),
+        matched: Number(state.adsCheckV6Matched || 0),
+        imported: Number(state.adsCheckV6Imported || 0),
+        updated: Number(state.adsCheckV6Updated || 0),
+        lastSyncAtMs,
+        lastSuccessAtMs: Number(state.adsCheckV6LastSuccessAtMs || lastSyncAtMs || 0),
+        lastReceivedAtMs: Number(state.adsCheckV6LastReceivedAtMs || lastSyncAtMs || 0),
+        lastScannedAtMs: Number(state.adsCheckV6LastScannedAtMs || 0),
+        lastReason: state.adsCheckV6LastReason || "",
+        lastError: state.adsCheckV6LastError || "",
+        sourceType: "adscheck_v6",
+      });
+    }
+
+    if (action === "adsCheckV6Configure") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const stateRef = db.collection(META_STATES).doc(workspace);
+      const stateSnap = await stateRef.get();
+      const previous = stateSnap.exists ? (stateSnap.data() || {}) : {};
+      const settings = adsCheckSettings({ ...(previous.adsCheckV6Settings || previous.settings || {}), ...(body.settings || {}) });
+      // Hybrid v7.2: AdsCheck is display/realtime only. It may import accounts and update threshold,
+      // but it never owns billing transactions or Meta payment history.
+      await stateRef.set({ adsCheckV6Settings: settings, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      return sendJson(res, 200, { ok: true, settings });
+    }
+
+    if (action === "adsCheckV6Sync") {
+      const verified = await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const result = await syncAdsCheckData(workspace, verified.connection, { ...body, sourceType: "adscheck" }, deviceName || "AdsCheck V6 Extension");
+      const stateRef = db.collection(META_STATES).doc(workspace);
+      await stateRef.set({
+        adsCheckV6LastSyncAtMs: Date.now(),
+        adsCheckV6LastSuccessAtMs: Date.now(),
+        adsCheckV6LastReceivedAtMs: Number(result.serverReceivedAtMs || Date.now()),
+        adsCheckV6LastScannedAtMs: Number(result.scannedAtMs || 0),
+        adsCheckV6LastReason: String(body.reason || "manual").slice(0, 60),
+        adsCheckV6LastError: "",
+        adsCheckV6AccountCount: Number(result.scanned || 0),
+        adsCheckV6DiscoveredCount: Number(result.discoveredCount || 0),
+        adsCheckV6SelectedCount: Number(result.selectedCount || 0),
+        adsCheckV6Matched: Number(result.matched || 0),
+        adsCheckV6Imported: Number(result.imported || 0),
+        adsCheckV6Updated: Number(result.updated || 0),
+        adsCheckV6Settings: result.settings || {},
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return sendJson(res, 200, { ok: true, ...result, billingSource: "meta_api", realtimeSource: "adscheck_v6" });
     }
 
     if (action === "metaApiStatus") {

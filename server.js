@@ -106,7 +106,7 @@ app.get("/healthz", async (_req, res) => {
     node: process.version,
     storage: "postgresql",
     database,
-    integrations: { metaGraphApi: true, googleSheets: true, outlook: false, adscheck: false },
+    integrations: { metaGraphApi: true, googleSheets: true, outlook: false, adscheckV6Realtime: true },
     config: {
       databaseUrl: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL),
       appEncryptionKey: Boolean(process.env.APP_ENCRYPTION_KEY || process.env.OUTLOOK_TOKEN_KEY),

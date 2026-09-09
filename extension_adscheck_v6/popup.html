@@ -1,0 +1,39 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>T Balance AdsCheck V6 Sync v6.0.0</title><link rel="stylesheet" href="popup.css"></head><body>
+<div class="shell">
+  <header>
+    <div class="logo">T</div>
+    <div class="head-copy"><h1>AdsCheck V6 Sync</h1><p>T Balance v6.0.0 · AdsCheck V6</p></div>
+    <span id="statusDot" class="dot"></span>
+  </header>
+  <section class="hero">
+    <div class="hero-top"><div><div class="label">Kết nối T Balance</div><div id="statusText" class="status">Đang kiểm tra…</div></div><div class="hero-chip">Cloud</div></div>
+    <div id="lastSync" class="muted">Chưa đồng bộ</div><div id="syncDetail" class="muted">Dữ liệu sẽ tự gửi khi bảng AdsCheck sẵn sàng.</div>
+    <div class="hero-actions"><button id="openAdsCheck" class="soft">Mở AdsCheck V6</button><button id="openTBalance" class="soft">Mở T Balance</button></div>
+  </section>
+  <section>
+    <div class="section-title">Máy chủ & ghép nối</div>
+    <label>URL Vercel T Balance</label><input id="serverBase" type="url" placeholder="https://ten-du-an.vercel.app" />
+    <p class="hint">Dán domain sau khi deploy Vercel. Extension sẽ gọi API trực tiếp tại domain này.</p>
+    <label>Tên thiết bị</label><input id="deviceName" maxlength="80" placeholder="Chrome AdsCheck" />
+    <div id="pairBox"><label>Mã ghép 8 số từ T Balance</label><div class="row"><input id="pairingCode" inputmode="numeric" maxlength="8" placeholder="12345678"><button id="pairBtn">Ghép</button></div><p class="hint">T Balance → AdsCheck Pro V6 → Tạo mã ghép Extension.</p></div>
+  </section>
+  <section class="account-picker">
+    <div class="section-head"><div><div class="section-title">Tài khoản từ AdsCheck V6</div><div id="accountCount" class="account-count">Chưa đọc danh sách</div></div><button id="previewBtn" class="small primary">Đọc danh sách</button></div>
+    <label class="check emphasis"><input id="syncSelectedOnly" type="checkbox"><span>Chỉ gửi các tài khoản được chọn</span></label>
+    <div class="picker-tools"><input id="accountSearch" placeholder="Tìm tên hoặc ID"><button id="selectAllBtn" class="small">Tất cả</button><button id="selectNoneBtn" class="small">Bỏ chọn</button></div>
+    <div id="accountList" class="account-list"><div class="empty">Mở AdsCheck V6, tải tài khoản rồi bấm “Đọc danh sách”.</div></div>
+  </section>
+  <section class="checks">
+    <div class="section-title">Tự động hóa</div>
+    <div class="two-col"><label class="check"><input id="autoSync" type="checkbox" checked><span>Tự động quét</span></label><label class="check"><input id="autoOpen" type="checkbox"><span>Tự mở AdsCheck</span></label></div>
+    <label class="check"><input id="autoRefreshBeforeSync" type="checkbox" checked><span>Tự làm mới AdsCheck trước khi gửi</span></label>
+    <label>Chu kỳ dự phòng</label><select id="intervalMinutes"><option value="1">1 phút</option><option value="5">5 phút</option><option value="10">10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option></select>
+    <div class="divider"></div>
+    <label class="check"><input id="autoImport" type="checkbox" checked><span>Tự thêm TKQC chưa có</span></label>
+    <label class="check"><input id="autoLinkBank" type="checkbox" checked><span>Tự gắn thẻ theo 4 số cuối</span></label>
+    <label class="check"><input id="updateThreshold" type="checkbox" checked><span>Tự cập nhật ngưỡng</span></label>
+    <label class="check"><input id="notifyInsufficient" type="checkbox" checked><span>Thông báo khi thẻ không đủ</span></label>
+  </section>
+  <div id="message" class="message"></div>
+  <div class="actions"><button id="syncBtn" class="primary">Làm mới & đồng bộ</button><button id="saveBtn">Lưu lựa chọn</button></div>
+</div><script src="popup.js"></script></body></html>

@@ -2836,7 +2836,7 @@ function prepareDashboardFinancialCache() {
 }
 
 function syncedAdsCheckAccounts() {
-  return (data.adAccounts || []).filter((ad) => ad.metaLastSyncAt || ad.metaApi || ad.createdFrom === "meta_api");
+  return (data.adAccounts || []).filter((ad) => ad.metaLastSyncAt || ad.metaApi || ad.adsCheckV6LastSyncAt || ad.lastAdsCheckSyncAt || ad.adsCheck || ad.createdFrom === "meta_api" || ad.createdFrom === "adscheck_smit");
 }
 
 function dashboardSelectedIds() {
@@ -2850,7 +2850,9 @@ function isAdsCheckActive(ad) {
 }
 
 function adAccountBalance(ad) {
-  return Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? 0) || 0;
+  const adsCheckFresh = !!(ad.adsCheckV6LastSyncAt || (ad.adsCheck?.sourceType === "adscheck" && ad.lastAdsCheckSyncAt));
+  if (adsCheckFresh) return Number(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.metaApiBalance ?? ad.metaApi?.balance ?? 0) || 0;
+  return Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? ad.adsCheckBalance ?? ad.adsCheck?.balance ?? 0) || 0;
 }
 
 function adRemainingThreshold(ad) {
@@ -2916,9 +2918,11 @@ function renderDashboardAdCards(accounts) {
       : (ad.billingNextDateText || ad.metaApi?.nextBillingDateText || (state.threshold > 0 ? "Khi đạt ngưỡng" : "—"));
     const thresholdSourceText = ad.manualThresholdOverride
       ? "Thủ công"
-      : (ad.metaThresholdSource === "meta_billing_activity" || ad.metaApi?.thresholdSource === "meta_billing_activity")
-        ? "Meta API · Billing"
-        : ad.metaLastSyncAt ? "Meta API" : "Thủ công";
+      : (ad.metaThresholdSource === "adscheck_v6" || ad.adsCheck?.thresholdSource === "adscheck_v6")
+        ? "AdsCheck V6"
+        : (ad.metaThresholdSource === "meta_billing_activity" || ad.metaApi?.thresholdSource === "meta_billing_activity")
+          ? "Meta API · Billing"
+          : ad.adsCheckV6LastSyncAt ? "AdsCheck V6" : ad.metaLastSyncAt ? "Meta API" : "Thủ công";
     return `<article class="ad-balance-card ${state.shortage > 0 ? "risk" : ""}">
       <div class="ad-card-top"><div><div class="ad-card-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="ad-card-id">${escapeHtml(ad.accountId || "Chưa có ID")}</div></div></div>
       <div class="ad-card-balance">${money(state.balance)}</div><div class="ad-card-caption">Số dư tài khoản quảng cáo hiện tại</div>

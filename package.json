@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-google-sheets",
-  "version": "7.1.1",
+  "version": "7.2.0",
   "private": true,
-  "description": "T Balance v7.1.1 - Meta Billing auto deduct includes bank card fee and repairs historical Meta bill transactions missing fee",
+  "description": "T Balance v7.2.0 - Hybrid AdsCheck V6 realtime account data + Meta API billing + Google Sheets",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
