@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-billing-api",
-  "version": "6.1.9",
+  "version": "6.2.0",
   "private": true,
-  "description": "T Balance v6.1.9 - Fix editing ad accounts: optional bank link, durable manual overrides, conflict-safe cloud save",
+  "description": "T Balance v6.2.0 - Atomic manual ad-account editing with dedicated server patch API and robust edit-button event delegation",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
@@ -12,7 +12,7 @@
     "check": "node --check server.js && node --check server/store.js && node --check server/outlook-runtime.js && node --check api/outlookBridge.js && node --check api/outlookOAuthCallback.js && node --check api/outlookWebhook.js && node --check api/healthz.js && node --check public/push-sw.js && node --check extension_adscheck_sync/background.js && node --check extension_adscheck_sync/popup.js && node --check extension_meta_billing/background.js && node --check extension_meta_billing/popup.js",
     "token-key": "node scripts/generate-token-key.js",
     "vapid:generate": "node scripts/generate-vapid-keys.js",
-    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && node tests/test_billing_parser_en.js && node tests/test_billing_parser_vi.js"
+    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && node tests/test_billing_parser_en.js && node tests/test_billing_parser_vi.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_manual_ad_edit.js"
   },
   "dependencies": {
     "express": "^5.1.0",

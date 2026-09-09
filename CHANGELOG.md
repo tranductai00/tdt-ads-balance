@@ -1,3 +1,10 @@
+# v6.2.0
+
+- Fix triệt để sửa thủ công TKQC bằng atomic server patch `adAccountManualUpdate`.
+- Thêm event delegation cho nút Sửa và giữ manual override khi sync realtime.
+- Cho phép gỡ ngân hàng thủ công mà không bị auto-link lại.
+- Giữ nguyên Meta Billing/FBT/Outlook/AdsCheck.
+
 # v6.1.9 - Fix sửa tài khoản quảng cáo
 
 - Fix nút **Sửa**/Lưu tài khoản quảng cáo hoạt động ổn định với tài khoản chưa gắn ngân hàng.

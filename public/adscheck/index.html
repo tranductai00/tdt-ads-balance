@@ -3815,7 +3815,7 @@ function render() {
     const st = getAdStatus(ad);
     const item = document.createElement("div");
     item.className = "tx";
-    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn ngân hàng")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.lastAdsCheckSyncAt ? ` · UI Scan: ${money(ad.uiScanBalance ?? ad.billingPageBalance ?? ad.adsCheckBalance ?? 0)} / ngưỡng ${money(ad.threshold || 0)} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button class="small secondary" data-edit-ad="${ad.id}">Sửa</button><button class="small danger" data-delete-ad="${ad.id}">Xóa</button></div>`;
+    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn ngân hàng")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.lastAdsCheckSyncAt ? ` · UI Scan: ${money(ad.uiScanBalance ?? ad.billingPageBalance ?? ad.adsCheckBalance ?? 0)} / ngưỡng ${money(ad.threshold || 0)} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button type="button" class="small secondary" data-edit-ad="${ad.id}" aria-label="Sửa tài khoản quảng cáo">Sửa</button><button type="button" class="small danger" data-delete-ad="${ad.id}">Xóa</button></div>`;
     adMenuList.appendChild(item);
   });
 
@@ -4133,49 +4133,65 @@ function saveBankEdit() {
 }
 async function saveAdEdit() {
   const ad = data.adAccounts.find(a => a.id === editingAdId);
-  if (!ad) return;
+  if (!ad) return alert("Không tìm thấy tài khoản quảng cáo đang sửa. Hãy tải lại trang.");
   const button = el("btnSaveAdEdit");
   const name = el("editAdName").value.trim();
   const bankId = el("editAdBankId").value || "";
-  const accountId = el("editAdCode").value.trim();
+  const rawAccountId = el("editAdCode").value.trim();
+  const accountId = normalizeAdAccountId(rawAccountId);
   const threshold = positiveInt(el("editAdThreshold").value);
   if (!name) return alert("Nhập tên tài khoản QC.");
-  const normalized = normalizeAdAccountId(accountId);
-  const duplicate = normalized && data.adAccounts.find((item) => item.id !== ad.id && normalizeAdAccountId(item.accountId) === normalized);
+  const duplicate = accountId && data.adAccounts.find((item) => item.id !== ad.id && normalizeAdAccountId(item.accountId) === accountId);
   if (duplicate) return alert("Mã tài khoản quảng cáo này đã tồn tại.");
 
-  const oldAccountId = normalizeAdAccountId(ad.accountId);
-  const nowIso = new Date().toISOString();
-  if (normalized) unignoreAdAccount(accountId);
-  if (oldAccountId && normalized && oldAccountId !== normalized) {
-    const list = Array.isArray(data.settings?.deletedAdAccountIds) ? data.settings.deletedAdAccountIds : [];
-    if (!list.includes(oldAccountId)) list.push(oldAccountId);
-    data.settings.deletedAdAccountIds = list.slice(-1000);
-  }
+  const editPayload = {
+    id: ad.id,
+    currentAccountId: normalizeAdAccountId(ad.accountId),
+    name,
+    accountId,
+    bankId,
+    threshold,
+  };
 
-  ad.name = name;
-  ad.accountId = accountId;
-  ad.bankId = bankId;
-  ad.threshold = threshold;
-  ad.manualEditedAt = nowIso;
-  ad.manualNameOverride = true;
-  ad.manualBankOverride = !!bankId;
-  ad.manualThresholdOverride = threshold > 0;
-  ad.manualAccountIdOverride = true;
-
-  saveLocal();
-  render();
   if (button) { button.disabled = true; button.textContent = "Đang lưu..."; }
   try {
+    clearTimeout(autoSaveTimer);
     if (cloudReady) {
-      clearTimeout(autoSaveTimer);
-      const result = await callOutlookBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
+      // v6.2.0: patch atomically đúng 1 TKQC trên server, không gửi lại toàn workspace.
+      const result = await callOutlookBridge("adAccountManualUpdate", { edit: editPayload });
       cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
-      if (result.conflictMerged) await pullCloud({ silent: true });
-      showStatus("Đã lưu thay đổi tài khoản quảng cáo.");
+      if (result.payload) {
+        applyIncomingData(result.payload, "");
+      } else if (result.ad) {
+        const index = data.adAccounts.findIndex((item) => item.id === ad.id);
+        if (index >= 0) data.adAccounts[index] = { ...data.adAccounts[index], ...result.ad };
+        saveLocal();
+        render();
+      }
+      showStatus("Đã lưu chỉnh sửa thủ công tài khoản quảng cáo.");
     } else {
-      scheduleCloudSave();
-      showStatus("Đã lưu trên thiết bị. Kết nối cloud để đồng bộ.");
+      // Local fallback khi cloud chưa sẵn sàng.
+      const oldAccountId = normalizeAdAccountId(ad.accountId);
+      ad.name = name;
+      ad.accountId = accountId;
+      ad.bankId = bankId;
+      ad.threshold = threshold;
+      ad.manualEditedAt = new Date().toISOString();
+      ad.manualEditRevision = Number(ad.manualEditRevision || 0) + 1;
+      ad.manualNameOverride = true;
+      ad.manualBankOverride = true;
+      ad.manualThresholdOverride = threshold > 0;
+      ad.manualAccountIdOverride = true;
+      if (oldAccountId && accountId && oldAccountId !== accountId) {
+        const list = Array.isArray(data.settings?.deletedAdAccountIds) ? data.settings.deletedAdAccountIds : [];
+        if (!list.includes(oldAccountId)) list.push(oldAccountId);
+        data.settings.deletedAdAccountIds = list.filter((item) => normalizeAdAccountId(item) !== accountId).slice(-1000);
+      } else if (accountId) {
+        unignoreAdAccount(accountId);
+      }
+      saveLocal();
+      render();
+      showStatus("Đã lưu chỉnh sửa trên thiết bị. Kết nối cloud để đồng bộ.");
     }
     closeAdModal();
   } catch (error) {
@@ -4314,6 +4330,15 @@ el("btnCloseBankModal").addEventListener("click", closeBankModal);
 el("btnCloseAdModal").addEventListener("click", closeAdModal);
 el("btnCloseTxModal").addEventListener("click", closeTxModal);
 el("btnSaveBankEdit").addEventListener("click", saveBankEdit);
+// v6.2.0: event delegation dự phòng để nút Sửa luôn hoạt động kể cả khi render giữa chừng bị lỗi.
+document.addEventListener("click", (event) => {
+  const editButton = event.target?.closest?.("[data-edit-ad]");
+  if (!editButton) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openAdModal(editButton.dataset.editAd);
+}, true);
+
 el("btnSaveAdEdit").addEventListener("click", saveAdEdit);
 el("btnDeleteAdEdit")?.addEventListener("click", () => { if (editingAdId) deleteAdAccount(editingAdId); });
 el("btnSaveTxEdit").addEventListener("click", saveTxEdit);

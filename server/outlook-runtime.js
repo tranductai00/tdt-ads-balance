@@ -454,6 +454,79 @@ function sanitizeWorkspacePayload(value) {
 }
 
 
+function applyManualAdAccountEdit(payloadInput, editInput = {}) {
+  const source = getPayload(payloadInput || {});
+  const payload = JSON.parse(JSON.stringify(source));
+  if (!payload.settings || typeof payload.settings !== "object") payload.settings = {};
+  if (!Array.isArray(payload.settings.deletedAdAccountIds)) payload.settings.deletedAdAccountIds = [];
+
+  const targetId = String(editInput.id || editInput.adId || "").trim();
+  const currentAccountId = normalizeAccountId(editInput.currentAccountId || editInput.oldAccountId || "");
+  let ad = targetId ? payload.adAccounts.find((item) => String(item?.id || "") === targetId) : null;
+  if (!ad && currentAccountId) ad = payload.adAccounts.find((item) => normalizeAccountId(item?.accountId) === currentAccountId);
+  if (!ad) {
+    const error = new Error("Không tìm thấy tài khoản quảng cáo cần sửa trên cloud. Hãy tải lại dữ liệu rồi thử lại.");
+    error.status = 404;
+    error.code = "AD_ACCOUNT_NOT_FOUND";
+    throw error;
+  }
+
+  const name = String(editInput.name || "").trim().slice(0, 160);
+  if (!name) {
+    const error = new Error("Nhập tên tài khoản quảng cáo.");
+    error.status = 400;
+    error.code = "AD_ACCOUNT_NAME_REQUIRED";
+    throw error;
+  }
+
+  const oldAccountId = normalizeAccountId(ad.accountId);
+  const newAccountId = normalizeAccountId(editInput.accountId || ad.accountId);
+  if (newAccountId) {
+    const duplicate = payload.adAccounts.find((item) => item !== ad && normalizeAccountId(item?.accountId) === newAccountId);
+    if (duplicate) {
+      const error = new Error("Mã tài khoản quảng cáo này đã tồn tại.");
+      error.status = 409;
+      error.code = "AD_ACCOUNT_DUPLICATE";
+      throw error;
+    }
+  }
+
+  const bankId = String(editInput.bankId ?? "").trim();
+  if (bankId && !payload.banks.some((bank) => String(bank?.id || "") === bankId)) {
+    const error = new Error("Ngân hàng được chọn không còn tồn tại. Hãy tải lại dữ liệu rồi chọn lại.");
+    error.status = 409;
+    error.code = "BANK_NOT_FOUND";
+    throw error;
+  }
+
+  const threshold = Math.max(0, Math.round(cleanPositiveNumber(editInput.threshold)));
+  const nowIso = new Date().toISOString();
+
+  ad.name = name;
+  ad.accountId = newAccountId || "";
+  ad.bankId = bankId;
+  ad.threshold = threshold;
+  ad.manualEditedAt = nowIso;
+  ad.manualEditRevision = Number(ad.manualEditRevision || 0) + 1;
+  ad.manualNameOverride = true;
+  // Người dùng đã bấm Lưu thì kể cả chọn "Không gắn ngân hàng" cũng là lựa chọn thủ công.
+  ad.manualBankOverride = true;
+  ad.manualThresholdOverride = threshold > 0;
+  ad.manualAccountIdOverride = true;
+
+  if (oldAccountId && newAccountId && oldAccountId !== newAccountId) {
+    const deleted = new Set(payload.settings.deletedAdAccountIds.map(normalizeAccountId).filter(Boolean));
+    deleted.add(oldAccountId);
+    deleted.delete(newAccountId);
+    payload.settings.deletedAdAccountIds = Array.from(deleted).slice(-1000);
+  } else if (newAccountId) {
+    payload.settings.deletedAdAccountIds = payload.settings.deletedAdAccountIds.filter((item) => normalizeAccountId(item) !== newAccountId);
+  }
+
+  return { payload, ad: JSON.parse(JSON.stringify(ad)) };
+}
+
+
 const ADSCHECK_SERVER_FIELDS = Object.freeze([
   "adsCheckBalance", "adsCheckSelected", "remainingThreshold", "paymentCardLast4",
   "paymentCardBrand", "billingNextDate", "billingNextDateText", "billingPageBalance",
@@ -3366,6 +3439,29 @@ exports.outlookBridge = onRequest({
       });
     }
 
+    if (action === "adAccountManualUpdate") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const ref = db.collection(WORKSPACES).doc(workspace);
+      let updatedAd = null;
+      let savedPayload = null;
+      await db.runTransaction(async (transaction) => {
+        const currentSnap = await transaction.get(ref);
+        const currentRaw = currentSnap.exists ? (currentSnap.data() || {}) : {};
+        const result = applyManualAdAccountEdit(currentRaw, body.edit || body.adAccount || {});
+        updatedAd = result.ad;
+        savedPayload = result.payload;
+        transaction.set(ref, { payload: savedPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      });
+      const next = await ref.get();
+      return sendJson(res, 200, {
+        ok: true,
+        saved: true,
+        ad: updatedAd,
+        payload: savedPayload,
+        updatedAtMs: timestampToMs(next.data()?.updatedAt) || Date.now(),
+      });
+    }
+
     if (action === "workspaceGet" || action === "workspaceSet") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
       if (action === "workspaceGet") {
@@ -4368,6 +4464,7 @@ if (process.env.NODE_ENV === "test") {
     normalizeMetaBillingConfig,
     shouldRetryMetaBillingEvent,
     mergeConcurrentWorkspacePayload,
+    applyManualAdAccountEdit,
     tryParseEmbeddedMetaValue,
     findMetaBillingRelatedAmount,
     applyMetaBillingSnapshotRecovery,
