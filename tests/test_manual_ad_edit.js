@@ -64,3 +64,29 @@ assert.throws(() => hooks.applyManualAdAccountEdit({
 }, {id:"a", name:"A2", accountId:"2", bankId:"", threshold:0}), /đã tồn tại/i);
 
 console.log("PASS atomic manual ad-account edit");
+
+// v7.0.3: auto-imported Meta account must still be editable even if local id/accountId diverged; metaAccountId is stable identity.
+const metaStable = hooks.applyManualAdAccountEdit({
+  banks: [{ id: "bank-x", name: "BANK X" }],
+  adAccounts: [{ id: "server-id", name: "Meta Auto", accountId: "111222", metaAccountId: "999000", bankId: "", threshold: 0 }],
+  transactions: [], settings: {}
+}, {
+  id: "stale-local-id",
+  metaAccountId: "999000",
+  currentAccountId: "333444",
+  name: "Tên sửa Meta",
+  accountId: "555666",
+  bankId: "bank-x",
+  threshold: 123456,
+});
+assert.equal(metaStable.ad.id, "server-id");
+assert.equal(metaStable.ad.name, "Tên sửa Meta");
+assert.equal(metaStable.ad.accountId, "555666");
+assert.equal(metaStable.ad.bankId, "bank-x");
+assert.equal(metaStable.ad.threshold, 123456);
+
+assert.equal(hooks.getValidFundingSource({ banks: [{ id: "b1" }] }, { bankId: "" }), null);
+assert.equal(hooks.getValidFundingSource({ banks: [{ id: "b1" }] }, { bankId: "missing" }), null);
+assert.equal(hooks.getValidFundingSource({ banks: [{ id: "b1" }] }, { bankId: "b1" }).id, "b1");
+
+console.log("PASS v7.0.3 stable Meta manual edit + funding source validation");

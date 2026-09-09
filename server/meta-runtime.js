@@ -461,8 +461,10 @@ function applyManualAdAccountEdit(payloadInput, editInput = {}) {
   if (!Array.isArray(payload.settings.deletedAdAccountIds)) payload.settings.deletedAdAccountIds = [];
 
   const targetId = String(editInput.id || editInput.adId || "").trim();
+  const stableMetaAccountId = normalizeAccountId(editInput.metaAccountId || editInput.metaId || "");
   const currentAccountId = normalizeAccountId(editInput.currentAccountId || editInput.oldAccountId || "");
   let ad = targetId ? payload.adAccounts.find((item) => String(item?.id || "") === targetId) : null;
+  if (!ad && stableMetaAccountId) ad = payload.adAccounts.find((item) => normalizeAccountId(item?.metaAccountId || item?.accountId) === stableMetaAccountId);
   if (!ad && currentAccountId) ad = payload.adAccounts.find((item) => normalizeAccountId(item?.accountId) === currentAccountId);
   if (!ad) {
     const error = new Error("Không tìm thấy tài khoản quảng cáo cần sửa trên cloud. Hãy tải lại dữ liệu rồi thử lại.");
@@ -1031,6 +1033,12 @@ function isAfterProcessStart(connection, receivedDateTime) {
   const receivedAt = Date.parse(receivedDateTime || "");
   if (!Number.isFinite(receivedAt)) return false;
   return receivedAt >= getProcessFrom(connection);
+}
+
+function getValidFundingSource(payload, ad) {
+  const bankId = String(ad?.bankId || "").trim();
+  if (!bankId) return null;
+  return (payload?.banks || []).find((bank) => String(bank?.id || "") === bankId) || null;
 }
 
 function calculateBankBalances(payload) {
@@ -2067,7 +2075,65 @@ async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphV
   }
 }
 
+async function repairMetaBillingNoSourceDeductions(workspace) {
+  let repaired = 0;
+  await db.runTransaction(async (transaction) => {
+    const workspaceRecord = await getWorkspaceSnapshot(transaction, workspace);
+    const payload = getPayload(workspaceRecord.data || {});
+    const badTransactions = (payload.transactions || []).filter((tx) => {
+      if (String(tx?.type || "") !== "ad_payment") return false;
+      if (String(tx?.source || "") !== "meta_billing_api") return false;
+      if (!String(tx?.sourceEventId || "").startsWith("meta-billing:")) return false;
+      return !String(tx?.bankIdSnapshot || "").trim();
+    });
+    if (!badTransactions.length) return;
+
+    const badIds = new Set(badTransactions.map((tx) => String(tx?.id || "")).filter(Boolean));
+    payload.transactions = (payload.transactions || []).filter((tx) => !badIds.has(String(tx?.id || "")));
+    transaction.set(workspaceRecord.ref, { payload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+
+    for (const tx of badTransactions) {
+      const sourceEventId = String(tx?.sourceEventId || "");
+      const eventId = sourceEventId.replace(/^meta-billing:/, "");
+      const error = "Tài khoản quảng cáo chưa gắn nguồn tiền. Bill đã được ghi nhận nhưng chưa trừ tiền.";
+      if (eventId) {
+        const eventRef = db.collection(META_BILLING_EVENTS).doc(workspace).collection("items").doc(eventId);
+        transaction.set(eventRef, {
+          status: "pending_source",
+          transactionId: "",
+          error,
+          processed: true,
+          repairedNoSourceAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      if (sourceEventId) {
+        const receiptRef = db.collection(RECEIPTS).doc(workspace).collection("items").doc(receiptDocId(sourceEventId));
+        transaction.set(receiptRef, {
+          status: "pending_source",
+          transactionId: "",
+          deductedAmount: 0,
+          fee: 0,
+          error,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      repaired += 1;
+    }
+  });
+  return repaired;
+}
+
 async function recentMetaBillingEvents(workspace, limit = 30) {
+  const workspacePayload = await readWorkspacePayloadForMetaBilling(workspace);
+  const ads = Array.isArray(workspacePayload?.adAccounts) ? workspacePayload.adAccounts : [];
+  const banks = Array.isArray(workspacePayload?.banks) ? workspacePayload.banks : [];
+  const banksById = new Map(banks.map((bank) => [String(bank?.id || ""), bank]));
+  const adByMetaId = new Map();
+  for (const ad of ads) {
+    const metaId = normalizeAccountId(ad?.metaAccountId || ad?.accountId);
+    if (metaId && !adByMetaId.has(metaId)) adByMetaId.set(metaId, ad);
+  }
+
   const snap = await db.collection(META_BILLING_EVENTS).doc(workspace).collection("items")
     .orderBy("eventTime", "desc")
     .limit(Math.max(1, Math.min(100, Number(limit || 30))))
@@ -2075,6 +2141,13 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
   return snap.docs.map((doc) => {
     const raw = doc.data() || {};
     const safeExtra = raw.extraData && typeof raw.extraData === "object" ? raw.extraData : {};
+    const matchedAd = adByMetaId.get(normalizeAccountId(raw.accountId || "")) || null;
+    const fundingBank = matchedAd?.bankId ? banksById.get(String(matchedAd.bankId)) || null : null;
+    const invalidAutoDeduct = String(raw.status || "") === "auto_deducted" && !fundingBank;
+    const effectiveStatus = invalidAutoDeduct ? "pending_source" : (raw.status || "recognized");
+    const effectiveError = invalidAutoDeduct
+      ? "Tài khoản quảng cáo chưa gắn nguồn tiền. Bill đã được ghi nhận nhưng chưa trừ tiền."
+      : (raw.error || "");
     return {
       id: doc.id,
       eventId: raw.eventId || doc.id,
@@ -2099,9 +2172,11 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
       billingValue: Number(raw.billingValue || raw.amount || 0),
       billingTotalValue: Number(raw.billingTotalValue || raw.amount || 0),
       downloadInvoiceLink: raw.downloadInvoiceLink || "",
-      status: raw.status || "recognized",
-      error: raw.error || "",
-      transactionId: raw.transactionId || "",
+      status: effectiveStatus,
+      error: effectiveError,
+      transactionId: invalidAutoDeduct ? "" : (raw.transactionId || ""),
+      fundingSourceId: fundingBank ? String(fundingBank.id || "") : "",
+      fundingSourceName: fundingBank ? String(fundingBank.name || "Nguồn tiền").slice(0, 160) : "",
       extraSummary: JSON.stringify(safeExtra).slice(0, 500),
     };
   });
@@ -2110,7 +2185,7 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
 function shouldRetryMetaBillingEvent(existingData = {}, event = {}) {
   const status = String(existingData.status || "");
   return existingData.processed === true
-    && ["parse_error", "estimated", "recovered"].includes(status)
+    && ["parse_error", "estimated", "recovered", "pending_source"].includes(status)
     && event.isSuccessfulCharge === true
     && status !== "auto_deducted"
     && status !== "linked_outlook";
@@ -2126,6 +2201,8 @@ function resolveMetaBillingSinceMs({ reason = "auto", lookbackFloor = 0, cursorM
 }
 
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
+  // v7.0.3: sửa dữ liệu sai từ các bản cũ trước khi xử lý billing mới.
+  await repairMetaBillingNoSourceDeductions(workspace);
   if (!state?.metaAccessTokenEnc) {
     const error = new Error("Chưa cấu hình Meta Access Token trên giao diện web.");
     error.status = 400;
@@ -2302,7 +2379,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
           transactionId = applied.transaction?.id || "";
           if (status === "auto_deducted") autoDeducted += 1;
           else if (status === "duplicate") duplicates += 1;
-          else if (status === "pending_match") pending += 1;
+          else if (status === "pending_match" || status === "pending_source") pending += 1;
           else if (status === "parse_error") parseErrors += 1;
           else recognized += 1;
         }
@@ -3058,6 +3135,33 @@ async function applyParsedReceipt({ workspace, connection, message, parsed, forc
       return;
     }
 
+    // v7.0.3: chỉ được đánh dấu Đã tự trừ khi TKQC có nguồn tiền hợp lệ.
+    // Trước đây ad.bankId rỗng vẫn tạo ad_payment => UI báo auto_deducted dù thực tế không trừ ngân hàng nào.
+    const linkedBank = getValidFundingSource(payload, selected.ad);
+    if (!linkedBank) {
+      // Dọn giao dịch sai do các bản cũ tạo ra cho chính billing event này khi chưa có nguồn tiền.
+      const beforeCount = payload.transactions.length;
+      payload.transactions = payload.transactions.filter((tx) => {
+        const sameEvent = String(tx?.sourceEventId || tx?.outlookMessageId || "") === String(message.id || "");
+        const metaSource = String(tx?.source || "") === "meta_billing_api";
+        const sourceMissing = !String(tx?.bankIdSnapshot || "").trim();
+        return !(sameEvent && metaSource && sourceMissing);
+      });
+      if (payload.transactions.length !== beforeCount) {
+        transaction.set(workspaceRecord.ref, { payload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      }
+      transaction.set(receiptRef, {
+        ...baseReceipt,
+        status: "pending_source",
+        transactionId: "",
+        deductedAmount: 0,
+        fee: 0,
+        error: "Tài khoản quảng cáo chưa gắn nguồn tiền. Bill đã được ghi nhận nhưng chưa trừ tiền.",
+      }, { merge: true });
+      result = { status: "pending_source", receiptId, pendingSource: true };
+      return;
+    }
+
     const duplicate = payload.transactions.find((tx) =>
       (parsed.txId && String(tx.txId || "").toLowerCase() === parsed.txId.toLowerCase()) ||
       String(tx.sourceEventId || tx.outlookMessageId || "") === String(message.id),
@@ -3488,18 +3592,20 @@ exports.metaBridge = onRequest({
 
     if (action === "adAccountManualUpdate") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
-      const ref = db.collection(WORKSPACES).doc(workspace);
       let updatedAd = null;
       let savedPayload = null;
+      let destinationRef = db.collection(WORKSPACES).doc(workspace);
       await db.runTransaction(async (transaction) => {
-        const currentSnap = await transaction.get(ref);
-        const currentRaw = currentSnap.exists ? (currentSnap.data() || {}) : {};
-        const result = applyManualAdAccountEdit(currentRaw, body.edit || body.adAccount || {});
+        // v7.0.3: dùng cùng cơ chế đọc workspace primary + legacy như workspaceGet.
+        // Bản cũ chỉ đọc WORKSPACES nên UI thấy dữ liệu legacy nhưng nút Sửa lại báo không tìm thấy.
+        const workspaceRecord = await getWorkspaceSnapshot(transaction, workspace);
+        destinationRef = workspaceRecord.ref;
+        const result = applyManualAdAccountEdit(workspaceRecord.data || {}, body.edit || body.adAccount || {});
         updatedAd = result.ad;
         savedPayload = result.payload;
-        transaction.set(ref, { payload: savedPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        transaction.set(destinationRef, { payload: savedPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       });
-      const next = await ref.get();
+      const next = await destinationRef.get();
       return sendJson(res, 200, {
         ok: true,
         saved: true,
@@ -3659,6 +3765,7 @@ exports.metaBridge = onRequest({
 
     if (action === "metaBillingStatus") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const repairedNoSource = await repairMetaBillingNoSourceDeductions(workspace);
       const stateSnap = await db.collection(META_STATES).doc(workspace).get();
       const state = stateSnap.exists ? (stateSnap.data() || {}) : {};
       const config = normalizeMetaBillingConfig(state);
@@ -3688,8 +3795,9 @@ exports.metaBridge = onRequest({
         availableAccounts: Array.isArray(state.metaBillingAvailableAccounts) ? state.metaBillingAvailableAccounts.slice(0, 500) : [],
         eventsFound: Number(state.metaBillingEventsFound || 0),
         newBills: Number(state.metaBillingNewBills || 0),
-        autoDeducted: Number(state.metaBillingAutoDeducted || 0),
-        pending: Number(state.metaBillingPending || 0),
+        autoDeducted: Math.max(0, Number(state.metaBillingAutoDeducted || 0) - Number(repairedNoSource || 0)),
+        pending: Number(state.metaBillingPending || 0) + Number(repairedNoSource || 0),
+        repairedNoSource: Number(repairedNoSource || 0),
         parseErrors: Number(state.metaBillingParseErrors || 0),
         duplicates: Number(state.metaBillingDuplicates || 0),
         recognized: Number(state.metaBillingRecognized || 0),
@@ -4002,6 +4110,7 @@ if (process.env.NODE_ENV === "test") {
     shouldRetryMetaBillingEvent,
     mergeConcurrentWorkspacePayload,
     applyManualAdAccountEdit,
+    getValidFundingSource,
     mergeMetaAccountsIntoPayload,
     tryParseEmbeddedMetaValue,
     findMetaBillingRelatedAmount,

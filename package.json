@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-only",
-  "version": "7.0.2",
+  "version": "7.0.3",
   "private": true,
-  "description": "T Balance v7.0.2 Meta-only - fix workspace/syncKey/deviceName request scope in metaBridge",
+  "description": "T Balance v7.0.3 Meta-only - fix manual ad-account editing across legacy/current workspace and prevent auto-deduct without a linked funding source",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"

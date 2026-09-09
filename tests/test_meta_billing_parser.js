@@ -76,6 +76,7 @@ assert.equal(selectedCfg.selectionMode, "selected");
 assert.deepEqual(selectedCfg.selectedAccountIds, ["123", "456"]);
 
 assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "parse_error", transactionId: "" }, { isSuccessfulCharge: true }), true);
+assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "pending_source", transactionId: "" }, { isSuccessfulCharge: true }), true, "pending_source must retry after a funding source is attached");
 assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "auto_deducted", transactionId: "tx1" }, { isSuccessfulCharge: true }), false);
 assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "parse_error", transactionId: "META-OLD-1" }, { isSuccessfulCharge: true }), true, "parse_error with existing txId must still retry");
 

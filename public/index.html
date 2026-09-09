@@ -1197,7 +1197,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
     </div>
     <div class="row" style="margin-top:14px"><div class="field"><label>Ngưỡng sẽ bị thu tiền</label><input id="editAdThreshold" inputmode="numeric" /></div></div>
     <div class="row" style="margin-top:14px">
-      <button id="btnSaveAdEdit">Lưu thay đổi</button>
+      <button id="btnSaveAdEdit" type="button">Lưu thay đổi</button>
       <button class="danger" id="btnDeleteAdEdit" type="button">Xóa tài khoản này</button>
     </div>
     <div class="helper-note" style="margin-top:8px">Có thể để trống ngân hàng. Ngưỡng nhập thủ công sẽ được ưu tiên và không bị Meta API ghi đè; để trống hoặc 0 để quay lại ngưỡng tự động.</div>
@@ -2308,6 +2308,7 @@ function metaBillingStatusLabel(status) {
     auto_deducted: ["Đã tự trừ", "ok"],
     duplicate: ["Đã có", "tag"],
     pending_match: ["Chờ khớp TKQC", "warn"],
+    pending_source: ["Chưa gắn nguồn tiền", "warn"],
     parse_error: ["Meta chưa trả amount", "warn"],
     linked_outlook: ["Dữ liệu cũ đã đối chiếu", "ok"],
     recovered: ["Đã phục hồi amount", "tag"],
@@ -2378,9 +2379,9 @@ function renderMetaBillingStatus() {
       "facebook_billing_tool:payment_amount/action_67/new_value": "FB Billing Tool · payment_amount/action 67/new_value",
       "facebook_billing_tool:payment_amount/new_value": "FB Billing Tool · payment_amount/new_value",
     })[bill.amountSourceKey] || bill.amountSourceKey || "";
-    const details = [bill.accountId ? `act_${bill.accountId}` : "", bill.txId ? `ID ${bill.txId}` : "", bill.cardLast4 ? `thẻ •••• ${bill.cardLast4}` : "", sourceLabel ? `Nguồn tiền: ${sourceLabel}` : ""].filter(Boolean).join(" · ");
+    const details = [bill.accountId ? `act_${bill.accountId}` : "", bill.txId ? `ID ${bill.txId}` : "", bill.cardLast4 ? `thẻ •••• ${bill.cardLast4}` : "", bill.fundingSourceName ? `Nguồn tiền: ${bill.fundingSourceName}` : "Chưa gắn nguồn tiền", sourceLabel ? `Nguồn dữ liệu: ${sourceLabel}` : ""].filter(Boolean).join(" · ");
     const eventName = bill.translatedEventType || bill.eventType || "Meta billing event";
-    const noteColor = ["parse_error", "failed"].includes(bill.status) ? "var(--bad)" : bill.status === "estimated" ? "var(--warn)" : "var(--muted)";
+    const noteColor = ["parse_error", "failed"].includes(bill.status) ? "var(--bad)" : ["estimated", "pending_source"].includes(bill.status) ? "var(--warn)" : "var(--muted)";
     const recoveryNote = bill.amountRecoveryNote || bill.error || "";
     const rawDetails = bill.status === "parse_error" && bill.extraSummary
       ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Xem extra_data Meta</summary><div class="sub" style="word-break:break-all;margin-top:4px">${escapeHtml(bill.extraSummary)}</div></details>` : "";
@@ -3375,7 +3376,7 @@ function openAdModal(id) {
   editingAdId = id;
   el("editAdName").value = ad.name || "";
   el("editAdCode").value = ad.accountId || "";
-  fillSelect(el("editAdBankId"), data.banks.map(b => ({ id: b.id, label: `${b.name}${b.number ? " - " + b.number : ""}` })), "Chọn ngân hàng");
+  fillSelect(el("editAdBankId"), data.banks.map(b => ({ id: b.id, label: `${b.name}${b.number ? " - " + b.number : ""}` })), "Không gắn nguồn tiền");
   el("editAdBankId").value = ad.bankId || "";
   el("editAdThreshold").value = ad.threshold ? Number(ad.threshold).toLocaleString("vi-VN") : "";
   el("adModal").classList.add("open");
@@ -3476,6 +3477,7 @@ async function saveAdEdit() {
 
   const editPayload = {
     id: ad.id,
+    metaAccountId: normalizeAdAccountId(ad.metaAccountId || ad.accountId),
     currentAccountId: normalizeAdAccountId(ad.accountId),
     name,
     accountId,
