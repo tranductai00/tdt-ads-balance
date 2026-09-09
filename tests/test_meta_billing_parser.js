@@ -97,3 +97,53 @@ const newCipher = hooks.encryptSecret("new-meta-token");
 assert.equal(hooks.decryptSecret(newCipher), "new-meta-token");
 
 console.log("PASS Meta Billing parser + encryption fallback");
+
+// v6.1.6: Meta đôi khi trả amount trong new_value không có nhãn amount.
+const genericNewValue = hooks.normalizeMetaBillingActivity(
+  { accountId: "777888999", name: "TKQC new_value", currency: "VND" },
+  { event_type: "ad_account_billing_charge", event_time: Math.floor(Date.now()/1000), extra_data: { new_value: "650000" } },
+);
+assert.equal(genericNewValue.amount, 650000);
+assert.equal(genericNewValue.amountConfidence, "medium");
+assert.ok(/new_value/.test(genericNewValue.amountSourceKey));
+
+const loosePairs = hooks.normalizeMetaBillingActivity(
+  { accountId: "888999000", currency: "VND" },
+  { event_type: "ad_account_billing_charge", event_time: Math.floor(Date.now()/1000), extra_data: "amount: 1.250.000 VND; currency: VND; payment_id: PAY-1" },
+);
+assert.equal(loosePairs.amount, 1250000);
+assert.equal(loosePairs.currency, "VND");
+
+const htmlEncoded = hooks.normalizeMetaBillingActivity(
+  { accountId: "999000111", currency: "VND" },
+  { event_type: "ad_account_billing_charge", event_time: Math.floor(Date.now()/1000), extra_data: "{&quot;payment_amount&quot;:&quot;750000 VND&quot;,&quot;transaction_id&quot;:&quot;HTML-1&quot;}" },
+);
+assert.equal(htmlEncoded.amount, 750000);
+assert.equal(htmlEncoded.txId, "HTML-1");
+
+const recoveryCtx = { candidates: [
+  { key: "tx:abc", kind: "outlook_transaction", accountId: "12345", amount: 900000, atMs: 1_000_000, txId: "TX-OUT", transactionId: "internal-1", alreadyApplied: true },
+] };
+const recovered = hooks.findMetaBillingRelatedAmount({ accountId: "12345", eventTimeMs: 1_120_000, txId: "TX-OUT", reference: "" }, recoveryCtx, new Set());
+assert(recovered);
+assert.equal(recovered.amount, 900000);
+assert.equal(recovered.alreadyApplied, true);
+assert.equal(recovered.confidence, "high");
+
+const snapshotEvents = [{ accountId: "22222", eventTimeMs: 2_100_000, isSuccessfulCharge: true, amount: 0, currency: "VND" }];
+const nextSnapshots = hooks.applyMetaBillingSnapshotRecovery(snapshotEvents, {
+  metaBillingAccountSnapshots: { "22222": { balance: 500000, amountSpent: 1000000, currency: "VND", capturedAtMs: 2_000_000 } },
+}, [{ accountId: "22222", balance: 100000, amountSpent: 1200000, currency: "VND" }], 2_200_000);
+assert.equal(snapshotEvents[0].amount, 600000); // 500k + 200k spend - 100k current balance
+assert.equal(snapshotEvents[0].amountConfidence, "estimated");
+assert.equal(snapshotEvents[0].amountSourceKey, "balance_delta");
+assert.equal(nextSnapshots["22222"].balance, 100000);
+
+const thresholdEvent = { accountId: "33333", isSuccessfulCharge: true, amount: 0 };
+const thresholdApplied = hooks.applyMetaBillingThresholdEstimate(thresholdEvent, { payload: { adAccounts: [{ accountId: "33333", threshold: 800000 }] } });
+assert.equal(thresholdApplied, true);
+assert.equal(thresholdEvent.amount, 800000);
+assert.equal(thresholdEvent.amountConfidence, "estimated");
+assert.equal(thresholdEvent.amountSourceKey, "payment_threshold");
+
+console.log("PASS Meta Billing v6.1.6 amount recovery engine");

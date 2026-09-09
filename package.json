@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-billing-api",
-  "version": "6.1.5",
+  "version": "6.1.6",
   "private": true,
-  "description": "T Balance v6.1.5 - fix Outlook Bridge HTTP 500 on explicit Vercel Functions; Express/Vercel response compatibility and diagnostics",
+  "description": "T Balance v6.1.6 - Meta Billing Amount Recovery Engine: deep extra_data parser, Outlook reconciliation, balance delta and threshold estimate",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"

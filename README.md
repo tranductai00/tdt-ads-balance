@@ -1,4 +1,4 @@
-# T Balance v6.1.3 — Vercel + PostgreSQL/Neon + Meta Billing API (không Firebase)
+# T Balance v6.1.6 — Vercel + PostgreSQL/Neon + Meta Billing Amount Recovery (không Firebase)
 
 Phiên bản này giữ nguyên luồng nghiệp vụ của T Balance v5.8.6/v6.0, đồng thời bổ sung **Meta Billing API tự động** và phần cài đặt API trực tiếp trên giao diện web. Hạ tầng vẫn hoàn toàn không dùng Firebase:
 
@@ -17,7 +17,7 @@ Không có `firebase`, `firebase-admin`, Firestore SDK, Cloud Functions SDK, FCM
 - Tự đồng bộ cloud nhiều thiết bị, khóa thiết bị, ghép thiết bị, thu hồi thiết bị.
 - AdsCheck V6 realtime/auto-sync, chọn tài khoản, tự ghép tài khoản, xóa tài khoản đã mất.
 - Meta Marketing API / Billing data và cảnh báo thiếu tiền.
-- **Meta Billing API v6.1:** nhập Access Token/Graph version ngay trên web; kiểm tra kết nối; lấy bill ngay; tự quét; chống trùng; tự khớp TKQC; chỉ tự trừ khi amount đủ tin cậy; bill lỗi/refund chỉ ghi nhận.
+- **Meta Billing API v6.1.6:** nhập Access Token/Graph version ngay trên web; chọn TKQC cần quét; tự lấy bill; Amount Recovery Engine đọc sâu `extra_data`, đối chiếu Outlook và dùng balance/threshold fallback; chỉ tự trừ nguồn amount đủ tin cậy.
 - Outlook OAuth, nhận email Meta, webhook, tự khấu trừ, quét thủ công và quét dự phòng.
 - Web Push thông báo biến động số dư và cảnh báo AdsCheck.
 - Dashboard, UI/UX và các route cũ `/`, `/adscheck`, `/sodu`.
@@ -42,7 +42,7 @@ vercel.json                     # Vercel config
 
 ## Deploy nhanh
 
-Xem **DEPLOY_VERCEL.md** và **README_V6.1_META_BILLING_API.md**. Không cần tạo bảng SQL thủ công: `server/store.js` tự tạo bảng `tb_documents` và index ở lần chạy đầu.
+Xem **DEPLOY_VERCEL.md**, **README_V6.1_META_BILLING_API.md** và **README_V6.1.6_META_BILLING_AMOUNT_RECOVERY.md**. Không cần tạo bảng SQL thủ công: `server/store.js` tự tạo bảng `tb_documents` và index ở lần chạy đầu.
 
 ## Dữ liệu từ bản cũ
 

@@ -1407,25 +1407,71 @@ function normalizeMetaBillingConfig(state = {}) {
   };
 }
 
+function decodeMetaEmbeddedText(value) {
+  let raw = String(value ?? "").trim();
+  if (!raw) return "";
+  raw = raw
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      try { return String.fromCodePoint(parseInt(hex, 16)); } catch { return _; }
+    })
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try { return String.fromCodePoint(parseInt(dec, 10)); } catch { return _; }
+    });
+  // Một số extra_data trả chuỗi đã escape thêm một lớp (\uXXXX, \n...).
+  if (/\\u[0-9a-f]{4}/i.test(raw) || /\\[nrt]/.test(raw)) {
+    try { raw = JSON.parse(`"${raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`); } catch {}
+  }
+  return raw.trim();
+}
+
+function tryParseLooseMetaPairs(rawValue) {
+  const raw = decodeMetaEmbeddedText(rawValue);
+  if (!raw) return null;
+  const object = {};
+  // Hỗ trợ dạng Meta/legacy: amount: 500000, currency: VND hoặc amount=500000;currency=VND.
+  const pairRegex = /(?:^|[,;|&]\s*)["']?([a-zA-Z0-9_.-]{2,64})["']?\s*[:=]\s*["']?([^,;|&}{]+?)["']?(?=\s*(?:[,;|&]|$))/g;
+  let match;
+  while ((match = pairRegex.exec(raw)) && Object.keys(object).length < 60) {
+    const key = String(match[1] || "").trim();
+    const val = String(match[2] || "").trim();
+    if (key && val) object[key] = val;
+  }
+  return Object.keys(object).length ? object : null;
+}
+
 function tryParseEmbeddedMetaValue(value) {
   if (value && typeof value === "object") return value;
-  let raw = String(value ?? "").trim();
+  let raw = decodeMetaEmbeddedText(value);
   if (!raw) return null;
   const variants = [raw];
-  if (/%(?:7B|7D|22|5B|5D)/i.test(raw)) {
-    try { variants.push(decodeURIComponent(raw)); } catch {}
+  if (/%(?:7B|7D|22|5B|5D|3A|2C)/i.test(raw)) {
+    try { variants.push(decodeMetaEmbeddedText(decodeURIComponent(raw))); } catch {}
   }
   for (const candidate of variants) {
     let current = candidate;
-    for (let depth = 0; depth < 3; depth += 1) {
-      const trimmed = String(current ?? "").trim();
+    for (let depth = 0; depth < 4; depth += 1) {
+      const trimmed = decodeMetaEmbeddedText(current);
       if (!trimmed || !/^(?:\{|\[|\")/.test(trimmed)) break;
       try {
         const parsed = JSON.parse(trimmed);
         if (parsed && typeof parsed === "object") return parsed;
         if (typeof parsed === "string" && parsed !== trimmed) { current = parsed; continue; }
         break;
-      } catch { break; }
+      } catch {
+        // Một số payload lịch sử dùng single quotes thay vì JSON chuẩn.
+        if (/^(?:\{|\[)/.test(trimmed) && /'[^']+'\s*:/.test(trimmed)) {
+          try {
+            const relaxed = trimmed.replace(/'([^']*)'/g, (_, inner) => JSON.stringify(inner));
+            const parsed = JSON.parse(relaxed);
+            if (parsed && typeof parsed === "object") return parsed;
+          } catch {}
+        }
+        break;
+      }
     }
   }
   if (/^[^\s=&]+=[^&]+(?:&[^\s=&]+=[^&]+)+$/.test(raw)) {
@@ -1436,7 +1482,7 @@ function tryParseEmbeddedMetaValue(value) {
       if (Object.keys(object).length) return object;
     } catch {}
   }
-  return null;
+  return tryParseLooseMetaPairs(raw);
 }
 
 function safeJsonParse(value) {
@@ -1565,9 +1611,11 @@ function extractMoneyCandidatesFromText(text, currencyHint = "", sourceKey = "te
 function extractMetaBillingAmount(extraData, currency, activity = {}) {
   const flat = flattenMetaBillingValues(extraData);
   const candidates = [];
-  const exactAmountKey = /(?:^|\.)(?:amount|charge_amount|charged_amount|payment_amount|billing_amount|invoice_amount|total_amount|amount_charged|charged_total|payment_total|transaction_amount|bill_amount|value_amount|amount_paid)$/i;
+  const exactAmountKey = /(?:^|\.)(?:amount|charge_amount|charged_amount|payment_amount|billing_amount|invoice_amount|total_amount|amount_charged|charged_total|payment_total|transaction_amount|bill_amount|value_amount|amount_paid|new_amount|charged_value|payment_value|billing_value)$/i;
   const amountishKey = /(?:charge|charged|payment|billing|bill|invoice|transaction|total|amount|paid)/i;
+  const genericBillingValueKey = /(?:^|\.)(?:new_value|newvalue|current_value|event_value|value|newvalue_text|new_value_text)$/i;
   const excludeKey = /(?:id|time|date|count|limit|balance|spent|threshold|cap)/i;
+  const successfulBillingCharge = String(activity?.event_type || "") === "ad_account_billing_charge";
 
   for (const item of flat) {
     const key = item.key || "";
@@ -1582,10 +1630,21 @@ function extractMetaBillingAmount(extraData, currency, activity = {}) {
         let score = 1;
         if (isExactAmount) score += 8;
         else if (/(?:amount|total|paid)/i.test(key)) score += 4;
-        if (/(?:charge_amount|charged_amount|payment_amount|billing_amount|invoice_amount|total_amount|amount_charged|transaction_amount|bill_amount|amount_paid)/i.test(key)) score += 3;
+        if (/(?:charge_amount|charged_amount|payment_amount|billing_amount|invoice_amount|total_amount|amount_charged|transaction_amount|bill_amount|amount_paid|new_amount|charged_value|payment_value|billing_value)/i.test(key)) score += 3;
         if (typeof item.value === "number" && isExactAmount) score += 2;
         if (typeof item.value === "string" && /(?:VND|VNĐ|₫|USD|EUR|THB|SGD|MYR|IDR|PHP|JPY|KRW|GBP|AUD|CAD|\$|€|£|฿)/i.test(item.value)) score += 4;
         candidates.push({ amount, score, key, currency: String(currency || "").toUpperCase() });
+      }
+    }
+
+    // Meta đôi khi chỉ trả {new_value:"500000"} cho ad_account_billing_charge.
+    // Với đúng event billing charge + currency của account, đây là tín hiệu đủ để hiển thị amount,
+    // nhưng chỉ cho confidence=medium để vẫn thận trọng hơn field amount rõ ràng.
+    if (successfulBillingCharge && genericBillingValueKey.test(key) && !excludeKey.test(key)) {
+      const raw = String(item.value ?? "").trim();
+      if (/^-?[\d.,\s]+$/.test(raw) && raw.replace(/\D/g, "").length >= 1 && raw.replace(/\D/g, "").length <= 12) {
+        const amount = parseLocaleMoneyString(raw, currency);
+        if (amount > 0) candidates.push({ amount, score: 7, key: key || "new_value", currency: String(currency || "").toUpperCase(), genericBillingValue: true });
       }
     }
 
@@ -1668,6 +1727,181 @@ function normalizeMetaBillingActivity(account, activity) {
   };
 }
 
+
+async function readWorkspacePayloadForMetaBilling(workspace) {
+  let raw = null;
+  try {
+    const primary = await db.collection(WORKSPACES).doc(workspace).get();
+    if (primary.exists) raw = primary.data() || {};
+    if (!raw) {
+      const legacy = await db.collection(LEGACY_WORKSPACES).doc(workspace).get();
+      if (legacy.exists) raw = legacy.data() || {};
+    }
+  } catch (error) {
+    console.warn("Meta Billing: không đọc được workspace để phục hồi amount:", error?.message || error);
+  }
+  return getPayload(raw || {});
+}
+
+async function loadMetaBillingAmountRecoveryContext(workspace) {
+  const payload = await readWorkspacePayloadForMetaBilling(workspace);
+  const adByInternalId = new Map((payload.adAccounts || []).map((ad) => [String(ad.id || ""), ad]));
+  const candidates = [];
+
+  for (const tx of payload.transactions || []) {
+    if (String(tx.type || "") !== "ad_payment") continue;
+    if (String(tx.source || "") === "meta_billing_api") continue;
+    const ad = adByInternalId.get(String(tx.adAccountId || ""));
+    const accountId = normalizeAccountId(tx.metaAdAccountId || ad?.accountId);
+    const amount = cleanPositiveNumber(tx.rawAmount || tx.amount);
+    const atMs = Date.parse(String(tx.createdAt || "")) || 0;
+    if (!accountId || !amount || !atMs) continue;
+    candidates.push({
+      key: `tx:${String(tx.id || tx.txId || `${accountId}:${atMs}`)}`,
+      kind: "outlook_transaction",
+      accountId,
+      amount,
+      atMs,
+      txId: String(tx.txId || ""),
+      reference: String(tx.reference || ""),
+      transactionId: String(tx.id || ""),
+      alreadyApplied: true,
+      sourceLabel: String(tx.source || "outlook_meta"),
+    });
+  }
+
+  try {
+    const receiptSnap = await db.collection(RECEIPTS).doc(workspace).collection("items")
+      .orderBy("receivedAt", "desc")
+      .limit(250)
+      .get();
+    for (const doc of receiptSnap.docs) {
+      const receipt = doc.data() || {};
+      if (String(receipt.source || "") !== "outlook_meta") continue;
+      const accountId = normalizeAccountId(receipt.adAccountId);
+      const amount = cleanPositiveNumber(receipt.amount);
+      const atMs = Date.parse(String(receipt.receivedAt || "")) || 0;
+      if (!accountId || !amount || !atMs) continue;
+      candidates.push({
+        key: `receipt:${doc.id}`,
+        kind: "outlook_receipt",
+        accountId,
+        amount,
+        atMs,
+        txId: String(receipt.txId || ""),
+        reference: String(receipt.reference || ""),
+        transactionId: String(receipt.transactionId || ""),
+        alreadyApplied: ["auto_deducted", "manually_applied", "duplicate"].includes(String(receipt.status || "")),
+        sourceLabel: "outlook_meta",
+      });
+    }
+  } catch (error) {
+    console.warn("Meta Billing: không đọc được biên lai Outlook để phục hồi amount:", error?.message || error);
+  }
+
+  // Loại candidate trùng giữa transaction và receipt; ưu tiên transaction đã áp dụng.
+  const deduped = [];
+  const seen = new Set();
+  for (const candidate of candidates.sort((a, b) => Number(b.alreadyApplied) - Number(a.alreadyApplied))) {
+    const signature = `${candidate.accountId}|${candidate.txId || candidate.reference || Math.round(candidate.atMs / 60000)}|${candidate.amount}`;
+    if (seen.has(signature)) continue;
+    seen.add(signature);
+    deduped.push(candidate);
+  }
+  return { payload, candidates: deduped };
+}
+
+function findMetaBillingRelatedAmount(event, recoveryContext, usedKeys = new Set()) {
+  const candidates = (recoveryContext?.candidates || []).filter((item) => item.accountId === event.accountId && !usedKeys.has(item.key));
+  if (!candidates.length) return null;
+  const eventTx = String(event.txId || "").trim().toLowerCase();
+  const eventRef = String(event.reference || "").trim().toLowerCase();
+
+  const exact = candidates.find((item) =>
+    (eventTx && String(item.txId || "").trim().toLowerCase() === eventTx)
+    || (eventRef && String(item.reference || "").trim().toLowerCase() === eventRef));
+  if (exact) return { ...exact, confidence: "high", matchReason: "transaction_reference" };
+
+  const timed = candidates
+    .map((item) => ({ ...item, diffMs: Math.abs(Number(item.atMs || 0) - Number(event.eventTimeMs || 0)) }))
+    .filter((item) => item.diffMs <= 45 * 60 * 1000)
+    .sort((a, b) => a.diffMs - b.diffMs);
+  if (!timed.length) return null;
+  const best = timed[0];
+  const second = timed[1];
+  // Chỉ ghép theo thời gian khi đủ rõ: duy nhất trong 45 phút, hoặc gần <= 12 phút
+  // và candidate tiếp theo cách ít nhất 8 phút để tránh ghép nhầm khi account bị charge liên tục.
+  const unambiguous = !second || best.diffMs <= 12 * 60 * 1000 && (second.diffMs - best.diffMs) >= 8 * 60 * 1000;
+  if (!unambiguous) return null;
+  return { ...best, confidence: best.alreadyApplied ? "high" : "medium", matchReason: "account_time" };
+}
+
+function applyMetaBillingSnapshotRecovery(events, state, discoveredAccounts, nowMs) {
+  const previous = state?.metaBillingAccountSnapshots && typeof state.metaBillingAccountSnapshots === "object"
+    ? state.metaBillingAccountSnapshots : {};
+  const currentById = new Map((discoveredAccounts || []).map((account) => [normalizeAccountId(account.accountId), account]));
+  const grouped = new Map();
+  for (const event of events || []) {
+    if (!event?.isSuccessfulCharge || Number(event.amount || 0) > 0) continue;
+    const list = grouped.get(event.accountId) || [];
+    list.push(event);
+    grouped.set(event.accountId, list);
+  }
+
+  for (const [accountId, accountEvents] of grouped.entries()) {
+    const prev = previous[accountId];
+    const current = currentById.get(accountId);
+    if (!prev || !current) continue;
+    const capturedAtMs = Number(prev.capturedAtMs || 0);
+    if (!capturedAtMs) continue;
+    const eligibleEvents = accountEvents.filter((item) => Number(item.eventTimeMs || 0) >= capturedAtMs - 10 * 60 * 1000);
+    if (eligibleEvents.length !== 1) continue;
+    const event = eligibleEvents[0];
+    const currency = String(current.currency || event.currency || "").toUpperCase();
+    // balance/amount_spent hiện được chuẩn hóa chính xác cho zero-decimal currency (đặc biệt VND).
+    if (!META_ZERO_DECIMAL_CURRENCIES.has(currency)) continue;
+    const prevBalance = cleanPositiveNumber(prev.balance);
+    const prevSpent = cleanPositiveNumber(prev.amountSpent);
+    const currentBalance = cleanPositiveNumber(current.balance);
+    const currentSpent = cleanPositiveNumber(current.amountSpent);
+    if (currentSpent < prevSpent) continue;
+    const spendDelta = Math.max(0, currentSpent - prevSpent);
+    const inferred = Math.round(prevBalance + spendDelta - currentBalance);
+    if (inferred <= 0 || inferred > Math.max(5_000_000_000, currentSpent + prevBalance + 1)) continue;
+    event.amount = inferred;
+    event.amountConfidence = "estimated";
+    event.amountSourceKey = "balance_delta";
+    event.amountRecoveryKind = "balance_delta";
+    event.amountRecoveryNote = `Ước tính từ balance + amount_spent giữa hai lần quét (${Math.round((nowMs - capturedAtMs) / 60000)} phút).`;
+  }
+
+  const snapshots = {};
+  for (const account of discoveredAccounts || []) {
+    const accountId = normalizeAccountId(account.accountId);
+    if (!accountId) continue;
+    snapshots[accountId] = {
+      balance: cleanPositiveNumber(account.balance),
+      amountSpent: cleanPositiveNumber(account.amountSpent),
+      currency: String(account.currency || "").toUpperCase(),
+      capturedAtMs: nowMs,
+    };
+  }
+  return snapshots;
+}
+
+function applyMetaBillingThresholdEstimate(event, recoveryContext) {
+  if (!event?.isSuccessfulCharge || Number(event.amount || 0) > 0) return false;
+  const ad = (recoveryContext?.payload?.adAccounts || []).find((item) => normalizeAccountId(item.accountId) === event.accountId);
+  const threshold = cleanPositiveNumber(ad?.threshold || ad?.adsCheck?.threshold || ad?.billingExtension?.threshold);
+  if (!threshold) return false;
+  event.amount = Math.round(threshold);
+  event.amountConfidence = "estimated";
+  event.amountSourceKey = "payment_threshold";
+  event.amountRecoveryKind = "payment_threshold";
+  event.amountRecoveryNote = "Meta không trả amount; đang hiển thị ước tính theo ngưỡng thanh toán hiện tại. Hệ thống không tự trừ số tiền ước tính.";
+  return true;
+}
+
 async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs) {
   const version = normalizeMetaGraphVersion(graphVersion);
   const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
@@ -1728,6 +1962,9 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
       amount: Number(raw.amount || 0),
       amountConfidence: raw.amountConfidence || "none",
       amountSourceKey: raw.amountSourceKey || "",
+      amountRecoveryKind: raw.amountRecoveryKind || "",
+      amountRecoveryNote: raw.amountRecoveryNote || "",
+      amountRecoveredFrom: raw.amountRecoveredFrom || "",
       currency: raw.currency || "",
       txId: raw.txId || "",
       reference: raw.reference || "",
@@ -1742,7 +1979,7 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
 
 function shouldRetryMetaBillingEvent(existingData = {}, event = {}) {
   return existingData.processed === true
-    && existingData.status === "parse_error"
+    && ["parse_error", "estimated", "recovered"].includes(String(existingData.status || ""))
     && event.isSuccessfulCharge === true
     && !existingData.transactionId;
 }
@@ -1821,6 +2058,34 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
     }
 
     allEvents.sort((a, b) => a.eventTimeMs - b.eventTimeMs);
+
+    // Amount Recovery Engine v6.1.6:
+    // 1) API extra_data parser; 2) đối chiếu Outlook; 3) balance delta; 4) payment threshold estimate.
+    const recoveryContext = await loadMetaBillingAmountRecoveryContext(workspace);
+    const nextAccountSnapshots = applyMetaBillingSnapshotRecovery(allEvents, state, discoveredAccounts, now);
+    const usedRecoveryKeys = new Set();
+    for (const event of allEvents) {
+      if (!event.isSuccessfulCharge) continue;
+      const hasTrustedApiAmount = Number(event.amount || 0) > 0 && ["high", "medium"].includes(String(event.amountConfidence || ""));
+      if (!hasTrustedApiAmount) {
+        const related = findMetaBillingRelatedAmount(event, recoveryContext, usedRecoveryKeys);
+        if (related) {
+          usedRecoveryKeys.add(related.key);
+          event.amount = related.amount;
+          event.amountConfidence = related.alreadyApplied ? "high" : "medium";
+          event.amountSourceKey = related.kind;
+          event.amountRecoveryKind = related.kind;
+          event.amountRecoveredFrom = related.key;
+          event.recoveryAlreadyApplied = related.alreadyApplied === true;
+          event.recoveryTransactionId = related.transactionId || "";
+          event.amountRecoveryNote = related.alreadyApplied
+            ? "Amount được đối chiếu từ giao dịch Outlook đã ghi nhận; không trừ thêm lần nữa."
+            : "Amount được đối chiếu từ biên lai Outlook cùng TKQC/thời gian; giữ trạng thái đối chiếu để tránh trừ trùng.";
+        }
+      }
+      if (!Number(event.amount || 0)) applyMetaBillingThresholdEstimate(event, recoveryContext);
+    }
+
     let newBills = 0;
     let autoDeducted = 0;
     let pending = 0;
@@ -1847,11 +2112,24 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       if (event.isSuccessfulCharge) {
         const currencyAllowed = !config.onlyVndAutoDeduct || !event.currency || event.currency === "VND";
         const confidenceAllowed = event.amountConfidence === "high" || event.amountConfidence === "medium";
-        if (!event.amount || !confidenceAllowed) {
+        if (event.recoveryAlreadyApplied && event.recoveryTransactionId) {
+          status = "linked_outlook";
+          transactionId = event.recoveryTransactionId;
+          errorText = "";
+          recognized += 1;
+        } else if (event.amountRecoveryKind === "outlook_receipt" && Number(event.amount || 0) > 0) {
+          status = "recovered";
+          errorText = event.amountRecoveryNote || "Đã phục hồi amount từ Outlook; chưa tự trừ để tránh tạo giao dịch trùng.";
+          recognized += 1;
+        } else if (event.amountConfidence === "estimated" && Number(event.amount || 0) > 0) {
+          status = "estimated";
+          errorText = event.amountRecoveryNote || "Amount đang là số ước tính; hệ thống không tự trừ để tránh sai số.";
+          recognized += 1;
+        } else if (!event.amount || !confidenceAllowed) {
           status = "parse_error";
           errorText = event.amount > 0
             ? `Đã thấy amount ${event.amount} nhưng nguồn ${event.amountSourceKey || "không xác định"} chưa đủ tin cậy để tự trừ.`
-            : "Chưa tìm thấy amount trong extra_data/translated_event_type. Hệ thống sẽ tự thử đọc lại event ở lần quét sau.";
+            : "Meta không trả amount trong extra_data/translated_event_type. Hệ thống sẽ tiếp tục thử đối chiếu Outlook và snapshot ở lần quét sau.";
           parseErrors += 1;
         } else if (!currencyAllowed) {
           status = "recognized";
@@ -1935,6 +2213,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingSelectedAccountCount: config.selectionMode === "selected" ? allAccounts.length : discoveredAccounts.length,
       metaBillingScanCursor: nextScanCursor,
       metaBillingAccountCursors: accountCursors,
+      metaBillingAccountSnapshots: nextAccountSnapshots,
       metaBillingEventsFound: allEvents.length,
       metaBillingNewBills: newBills,
       metaBillingAutoDeducted: autoDeducted,
@@ -3999,6 +4278,10 @@ if (process.env.NODE_ENV === "test") {
     extractMetaBillingCurrency,
     normalizeMetaBillingConfig,
     shouldRetryMetaBillingEvent,
+    tryParseEmbeddedMetaValue,
+    findMetaBillingRelatedAmount,
+    applyMetaBillingSnapshotRecovery,
+    applyMetaBillingThresholdEstimate,
     encryptSecret,
     decryptSecret,
   };

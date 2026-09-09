@@ -1251,7 +1251,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
         </div>
 
         <div class="divider"></div>
-        <div class="toolbar"><div><h2 style="margin:0;font-size:17px">Bill gần đây từ Meta API</h2><div class="footer-note">Nguồn: Ad Account Activities. Hệ thống đọc amount từ extra_data (kể cả JSON lồng) và translated_event_type khi có dấu tiền tệ rõ ràng; nếu vẫn không đủ dữ liệu thì giữ trạng thái chờ để tránh trừ sai.</div></div></div>
+        <div class="toolbar"><div><h2 style="margin:0;font-size:17px">Bill gần đây từ Meta API</h2><div class="footer-note">Nguồn: Ad Account Activities + Amount Recovery Engine. Ưu tiên extra_data, sau đó đối chiếu Outlook, biến động balance/amount_spent và ngưỡng thanh toán. Nguồn ước tính chỉ hiển thị, không tự trừ để tránh sai.</div></div></div>
         <div id="metaBillingRecentList" class="meta-billing-list"><div class="empty">Chưa có billing event.</div></div>
       </div>
 
@@ -2614,7 +2614,10 @@ function metaBillingStatusLabel(status) {
     auto_deducted: ["Đã tự trừ", "ok"],
     duplicate: ["Đã có", "tag"],
     pending_match: ["Chờ khớp TKQC", "warn"],
-    parse_error: ["Chưa đọc được tiền", "warn"],
+    parse_error: ["Meta chưa trả amount", "warn"],
+    linked_outlook: ["Đã đối chiếu Outlook", "ok"],
+    recovered: ["Đã phục hồi amount", "tag"],
+    estimated: ["Amount ước tính", "warn"],
     recognized: ["Đã ghi nhận", "tag"],
     failed: ["Thanh toán lỗi", "bad"],
     refund: ["Hoàn tiền", "tag"],
@@ -2670,12 +2673,23 @@ function renderMetaBillingStatus() {
   list.innerHTML = bills.map((bill) => {
     const [label, cls] = metaBillingStatusLabel(bill.status);
     const amount = Number(bill.amount || 0);
-    const amountText = amount > 0 ? `${bill.currency || ""} ${amount.toLocaleString("vi-VN")}`.trim() : "Chưa có amount";
-    const details = [bill.accountId ? `act_${bill.accountId}` : "", bill.txId ? `ID ${bill.txId}` : "", bill.cardLast4 ? `thẻ •••• ${bill.cardLast4}` : "", bill.amountSourceKey ? `amount: ${bill.amountSourceKey}` : ""].filter(Boolean).join(" · ");
+    const estimated = bill.status === "estimated" || bill.amountConfidence === "estimated";
+    const amountText = amount > 0 ? `${estimated ? "≈ " : ""}${bill.currency || ""} ${amount.toLocaleString("vi-VN")}`.trim() : "Meta không trả amount";
+    const sourceLabel = ({
+      outlook_transaction: "Outlook đã trừ",
+      outlook_receipt: "Biên lai Outlook",
+      balance_delta: "Biến động balance",
+      payment_threshold: "Ngưỡng thanh toán",
+    })[bill.amountRecoveryKind] || bill.amountSourceKey || "";
+    const details = [bill.accountId ? `act_${bill.accountId}` : "", bill.txId ? `ID ${bill.txId}` : "", bill.cardLast4 ? `thẻ •••• ${bill.cardLast4}` : "", sourceLabel ? `Nguồn tiền: ${sourceLabel}` : ""].filter(Boolean).join(" · ");
     const eventName = bill.translatedEventType || bill.eventType || "Meta billing event";
+    const noteColor = ["parse_error", "failed"].includes(bill.status) ? "var(--bad)" : bill.status === "estimated" ? "var(--warn)" : "var(--muted)";
+    const recoveryNote = bill.amountRecoveryNote || bill.error || "";
+    const rawDetails = bill.status === "parse_error" && bill.extraSummary
+      ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Xem extra_data Meta</summary><div class="sub" style="word-break:break-all;margin-top:4px">${escapeHtml(bill.extraSummary)}</div></details>` : "";
     return `<div class="meta-billing-row">
-      <div><div class="title">${escapeHtml(bill.accountName || "Tài khoản quảng cáo")}</div><div class="sub">${escapeHtml(eventName)}</div><div class="sub">${escapeHtml(details || bill.eventType || "")}</div></div>
-      <div><span class="badge ${cls}">${escapeHtml(label)}</span>${bill.error ? `<div class="sub" style="color:var(--bad)">${escapeHtml(bill.error)}</div>` : ""}</div>
+      <div><div class="title">${escapeHtml(bill.accountName || "Tài khoản quảng cáo")}</div><div class="sub">${escapeHtml(eventName)}</div><div class="sub">${escapeHtml(details || bill.eventType || "")}</div>${rawDetails}</div>
+      <div><span class="badge ${cls}">${escapeHtml(label)}</span>${recoveryNote ? `<div class="sub" style="color:${noteColor}">${escapeHtml(recoveryNote)}</div>` : ""}</div>
       <div class="date">${escapeHtml(formatAdsCheckDate(bill.eventTimeMs || bill.eventTime))}</div>
       <div class="amount">${escapeHtml(amountText)}</div>
     </div>`;

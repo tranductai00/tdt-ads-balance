@@ -1,3 +1,13 @@
+# v6.1.6 — Meta Billing Amount Recovery Engine
+
+- Fix các `ad_account_billing_charge` Meta chỉ trả “Đã lập hóa đơn cho tài khoản” nhưng không có amount rõ ràng.
+- Deep parser cho `new_value/current_value/event_value`, HTML entity, URL-encoded JSON, single-quote object và chuỗi key:value/key=value.
+- Đối chiếu amount từ giao dịch/biên lai Outlook theo TKQC + transaction/reference + thời gian; giao dịch Outlook đã trừ sẽ không bị trừ lần hai.
+- Lưu snapshot balance + amount_spent và suy luận payment delta cho VND/zero-decimal currency khi chỉ có một charge mới.
+- Fallback payment threshold để hiển thị amount ước tính khi Meta không trả amount; estimate không được auto-deduct.
+- Event `parse_error/estimated/recovered` tiếp tục được retry để tự nâng lên nguồn amount chính xác hơn khi dữ liệu mới xuất hiện.
+- UI thêm trạng thái `Đã đối chiếu Outlook`, `Đã phục hồi amount`, `Amount ước tính`, dấu `≈` và nút xem raw `extra_data`.
+
 # v6.1.3 — Meta Billing Amount + Selected Accounts Fix
 
 - Fix parser: `extra_data.amount`/`payment_amount`/`charge_amount` dạng số hoặc chuỗi được nâng độ tin cậy đúng mức.
