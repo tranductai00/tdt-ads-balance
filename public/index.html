@@ -1108,7 +1108,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
           <div class="setting-box">
             <label class="check-row"><input id="metaBillingEnabled" type="checkbox" checked /> Bật Meta API</label>
             <label class="check-row"><input id="metaBillingAutoSync" type="checkbox" checked /> Tự động đồng bộ TKQC + bill theo chu kỳ</label>
-            <label class="check-row"><input id="metaBillingAutoDeduct" type="checkbox" checked /> Tự trừ billing charge thành công sau khi khớp đúng TKQC</label>
+            <label class="check-row"><input id="metaBillingAutoDeduct" type="checkbox" checked /> Tự trừ billing charge + phí thẻ ngân hàng sau khi khớp đúng TKQC</label>
             <label class="check-row"><input id="metaBillingOnlyVnd" type="checkbox" checked /> Chỉ tự trừ bill VND; tiền tệ khác chỉ ghi nhận</label>
             <div class="notice"><b>Auto-import:</b> tài khoản có trong Meta API nhưng chưa có trong T Balance sẽ được thêm tự động. Tên/ngân hàng/ngưỡng đã sửa thủ công vẫn được ưu tiên.</div>
             <div class="row"><button id="btnMetaBillingSave" type="button">Lưu API</button><button class="secondary" id="btnMetaBillingTest" type="button">Kiểm tra kết nối</button><button class="ghost" id="btnMetaBillingClear" type="button">Xóa Token</button></div>
@@ -1548,7 +1548,7 @@ function bankDeposits(bankId) {
 function bankPayments(bankId) {
   return data.transactions.filter(t => t.type === "ad_payment").filter(t => {
     const ad = data.adAccounts.find(a => a.id === t.adAccountId);
-    return (ad?.bankId || t.bankIdSnapshot || "") === bankId;
+    return (t.bankIdSnapshot || ad?.bankId || "") === bankId;
   }).reduce((s, t) => s + Number(t.amount || 0), 0);
 }
 function getBankBalance(bank) {
@@ -2539,7 +2539,9 @@ async function syncMetaBillingBillsNow(silent = false, reason = "manual") {
     renderSmartDashboard();
     if (!silent) {
       const sheetWritten = Number(result.googleSheetSync?.written || 0);
-      addSyncLog(`Meta Billing: ${Number(result.eventsFound || 0)} event · ${Number(result.newBills || 0)} mới · ${Number(result.autoDeducted || 0)} tự trừ${sheetWritten ? ` · Google Sheet ${sheetWritten} ô` : ""}.`);
+      const feeRepairCount = Number(result.cardFeeRepair?.repaired || 0);
+      const feeRepairTotal = Number(result.cardFeeRepair?.feeTotal || 0);
+      addSyncLog(`Meta Billing: ${Number(result.eventsFound || 0)} event · ${Number(result.newBills || 0)} mới · ${Number(result.autoDeducted || 0)} tự trừ${feeRepairCount ? ` · sửa ${feeRepairCount} bill cũ thiếu phí (${money(feeRepairTotal)})` : ""}${sheetWritten ? ` · Google Sheet ${sheetWritten} ô` : ""}.`);
     }
     return result;
   } catch (error) {

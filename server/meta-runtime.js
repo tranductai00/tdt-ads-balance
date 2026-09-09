@@ -1111,7 +1111,9 @@ function calculateBankBalances(payload) {
     }
     if (tx.type === "ad_payment") {
       const ad = adsById.get(tx.adAccountId);
-      const bankId = ad?.bankId || tx.bankIdSnapshot || "";
+      // Ưu tiên snapshot tại thời điểm giao dịch. Nếu TKQC đổi nguồn tiền sau này,
+      // bill cũ vẫn phải nằm ở đúng ngân hàng đã bị trừ khi giao dịch phát sinh.
+      const bankId = tx.bankIdSnapshot || ad?.bankId || "";
       if (bankId && balances.has(bankId)) {
         balances.set(bankId, Number(balances.get(bankId) || 0) - Number(tx.amount || 0));
       }
@@ -2307,6 +2309,81 @@ async function repairMetaBillingNoSourceDeductions(workspace) {
   return repaired;
 }
 
+async function repairMetaBillingMissingCardFees(workspace) {
+  let repaired = 0;
+  let feeTotal = 0;
+  let feePercent = 0;
+  await db.runTransaction(async (transaction) => {
+    const workspaceRecord = await getWorkspaceSnapshot(transaction, workspace);
+    const payload = getPayload(workspaceRecord.data || {});
+    feePercent = parseCardFeePercent(payload);
+    if (!(feePercent > 0)) return;
+
+    const repairedItems = [];
+    const nowIso = new Date().toISOString();
+    for (const txRecord of payload.transactions || []) {
+      if (String(txRecord?.type || "") !== "ad_payment") continue;
+      if (String(txRecord?.source || "") !== "meta_billing_api") continue;
+      const sourceEventId = String(txRecord?.sourceEventId || "");
+      if (!sourceEventId.startsWith("meta-billing:")) continue;
+
+      const rawAmount = Number(txRecord?.rawAmount || txRecord?.amount || 0);
+      const currentAmount = Number(txRecord?.amount || 0);
+      const existingFee = Number(txRecord?.fee || 0);
+      const existingFeePercent = Number(String(txRecord?.feePercent || "0").replace(",", ".")) || 0;
+      if (!(rawAmount > 0)) continue;
+      // Chỉ sửa các transaction Meta cũ rõ ràng đang thiếu phí. Không đụng vào
+      // transaction đã có fee/feePercent hoặc có amount khác rawAmount.
+      if (existingFee > 0 || existingFeePercent > 0) continue;
+      if (Math.abs(currentAmount - rawAmount) > 1) continue;
+
+      const fee = Math.round(rawAmount * feePercent / 100);
+      if (!(fee > 0)) continue;
+      txRecord.rawAmount = rawAmount;
+      txRecord.fee = fee;
+      txRecord.feePercent = feePercent;
+      txRecord.amount = rawAmount + fee;
+      txRecord.feeAppliedBy = "meta_billing_card_fee_repair";
+      txRecord.feeRepairedAt = nowIso;
+      repaired += 1;
+      feeTotal += fee;
+      repairedItems.push({
+        sourceEventId,
+        transactionId: String(txRecord.id || ""),
+        fee,
+        rawAmount,
+        deductedAmount: rawAmount + fee,
+      });
+    }
+
+    if (!repairedItems.length) return;
+    transaction.set(workspaceRecord.ref, { payload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+
+    for (const item of repairedItems) {
+      const receiptRef = db.collection(RECEIPTS).doc(workspace).collection("items").doc(receiptDocId(item.sourceEventId));
+      transaction.set(receiptRef, {
+        fee: item.fee,
+        feePercent,
+        deductedAmount: item.deductedAmount,
+        feeRepairedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      const eventId = item.sourceEventId.replace(/^meta-billing:/, "");
+      if (eventId) {
+        const eventRef = db.collection(META_BILLING_EVENTS).doc(workspace).collection("items").doc(eventId);
+        transaction.set(eventRef, {
+          fee: item.fee,
+          feePercent,
+          deductedAmount: item.deductedAmount,
+          feeRepairedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+  });
+  return { repaired, feeTotal, feePercent };
+}
+
 async function recentMetaBillingEvents(workspace, limit = 30) {
   const workspacePayload = await readWorkspacePayloadForMetaBilling(workspace);
   const ads = Array.isArray(workspacePayload?.adAccounts) ? workspacePayload.adAccounts : [];
@@ -2387,6 +2464,8 @@ function resolveMetaBillingSinceMs({ reason = "auto", lookbackFloor = 0, cursorM
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
   // v7.0.3: sửa dữ liệu sai từ các bản cũ trước khi xử lý billing mới.
   await repairMetaBillingNoSourceDeductions(workspace);
+  // v7.1.1: sửa các Meta bill cũ đã tự trừ tiền bill nhưng thiếu phí thẻ ngân hàng.
+  const cardFeeRepair = await repairMetaBillingMissingCardFees(workspace);
   if (!state?.metaAccessTokenEnc) {
     const error = new Error("Chưa cấu hình Meta Access Token trên giao diện web.");
     error.status = 400;
@@ -2538,7 +2617,9 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
           const syntheticConnection = {
             settings: {
               autoDeduct: config.autoDeduct,
-              deductionMode: "exact",
+              // Meta-only v7.1.1: mỗi bill phải trừ cả phí thẻ ngân hàng theo
+              // data.settings.cardFeePercent, không chỉ trừ tiền bill gốc.
+              deductionMode: "with_fee",
             },
           };
           const parsed = {
@@ -2618,6 +2699,9 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingEventsFound: allEvents.length,
       metaBillingNewBills: newBills,
       metaBillingAutoDeducted: autoDeducted,
+      metaBillingCardFeeRepaired: Number(cardFeeRepair?.repaired || 0),
+      metaBillingCardFeeRepairTotal: Number(cardFeeRepair?.feeTotal || 0),
+      metaBillingCardFeePercent: Number(cardFeeRepair?.feePercent || 0),
       metaBillingPending: pending,
       metaBillingParseErrors: parseErrors,
       metaBillingDuplicates: duplicates,
@@ -2628,7 +2712,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       updatedAt: FieldValue.serverTimestamp(),
     };
     await db.collection(META_STATES).doc(workspace).set(patch, { merge: true });
-    return { scannedAccounts: accounts.length, totalAccounts, discoveredAccounts: discoveredAccounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, availableAccounts, nextScanCursor, eventsFound: allEvents.length, newBills, autoDeducted, pending, parseErrors, duplicates, recognized, accountErrors: errors.slice(0, 20), lastEventTimeMs, googleSheetSync };
+    return { scannedAccounts: accounts.length, totalAccounts, discoveredAccounts: discoveredAccounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, availableAccounts, nextScanCursor, eventsFound: allEvents.length, newBills, autoDeducted, pending, parseErrors, duplicates, recognized, accountErrors: errors.slice(0, 20), lastEventTimeMs, cardFeeRepair, googleSheetSync };
   } catch (error) {
     const patch = {
       metaBillingLastAttemptAtMs: Date.now(),
@@ -4390,6 +4474,8 @@ if (process.env.NODE_ENV === "test") {
     applyManualAdAccountEdit,
     applyAdFundingSourceEdit,
     getValidFundingSource,
+    calculateDeduction,
+    calculateBankBalances,
     mergeMetaAccountsIntoPayload,
     deriveMetaBillingProfile,
     tryParseEmbeddedMetaValue,

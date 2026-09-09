@@ -273,3 +273,26 @@ assert(importedMeta);
 assert.equal(importedMeta.createdFrom, "meta_api");
 assert.equal(importedMeta.metaAutoImported, true);
 console.log("PASS Meta-only auto import ad accounts");
+
+// v7.1.1: Meta Billing auto-deduct must include card fee in bank deduction.
+const feeDeduction = hooks.calculateDeduction({ settings: { cardFeePercent: "3" } }, 116651, "with_fee");
+assert.equal(feeDeduction.rawAmount, 116651);
+assert.equal(feeDeduction.fee, 3500);
+assert.equal(feeDeduction.total, 120151);
+assert.equal(feeDeduction.feePercent, 3);
+const exactDeduction = hooks.calculateDeduction({ settings: { cardFeePercent: "3" } }, 116651, "exact");
+assert.equal(exactDeduction.fee, 0);
+assert.equal(exactDeduction.total, 116651);
+console.log("PASS v7.1.1 Meta Billing card fee deduction");
+
+const balanceMap = hooks.calculateBankBalances({
+  banks: [
+    { id: "bank-old", initialBalance: 1000000 },
+    { id: "bank-new", initialBalance: 1000000 },
+  ],
+  adAccounts: [{ id: "ad-1", bankId: "bank-new" }],
+  transactions: [{ id: "tx-1", type: "ad_payment", adAccountId: "ad-1", bankIdSnapshot: "bank-old", amount: 120151 }],
+});
+assert.equal(balanceMap.get("bank-old"), 879849, "historical bill must stay on the bank snapshot used when it was paid");
+assert.equal(balanceMap.get("bank-new"), 1000000, "changing current funding source must not move old deductions");
+console.log("PASS v7.1.1 bank snapshot balance attribution");
