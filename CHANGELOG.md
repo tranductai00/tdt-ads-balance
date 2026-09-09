@@ -1,3 +1,11 @@
+# v6.1.8 — Facebook Billing Tool-compatible amount fix
+
+- Map chính xác `ad_account_billing_charge + type=payment_amount + action=67 + new_value` thành số tiền bill.
+- `transaction_id` được dùng làm ID giao dịch; tạo link PDF bill tương thích Billing Summary.
+- Manual sync backfill toàn bộ `lookbackDays`, không còn bị cursor 20 phút chặn các event parse_error cũ.
+- One-time parser revision backfill sau deploy để tự sửa lịch sử gần đây.
+- UI hiển thị nguồn `FB Billing Tool · payment_amount/action 67/new_value` và nút mở PDF bill.
+
 # v6.1.6 — Meta Billing Amount Recovery Engine
 
 - Fix các `ad_account_billing_charge` Meta chỉ trả “Đã lập hóa đơn cho tài khoản” nhưng không có amount rõ ràng.

@@ -2680,15 +2680,20 @@ function renderMetaBillingStatus() {
       outlook_receipt: "Biên lai Outlook",
       balance_delta: "Biến động balance",
       payment_threshold: "Ngưỡng thanh toán",
-    })[bill.amountRecoveryKind] || bill.amountSourceKey || "";
+    })[bill.amountRecoveryKind] || ({
+      "facebook_billing_tool:payment_amount/action_67/new_value": "FB Billing Tool · payment_amount/action 67/new_value",
+      "facebook_billing_tool:payment_amount/new_value": "FB Billing Tool · payment_amount/new_value",
+    })[bill.amountSourceKey] || bill.amountSourceKey || "";
     const details = [bill.accountId ? `act_${bill.accountId}` : "", bill.txId ? `ID ${bill.txId}` : "", bill.cardLast4 ? `thẻ •••• ${bill.cardLast4}` : "", sourceLabel ? `Nguồn tiền: ${sourceLabel}` : ""].filter(Boolean).join(" · ");
     const eventName = bill.translatedEventType || bill.eventType || "Meta billing event";
     const noteColor = ["parse_error", "failed"].includes(bill.status) ? "var(--bad)" : bill.status === "estimated" ? "var(--warn)" : "var(--muted)";
     const recoveryNote = bill.amountRecoveryNote || bill.error || "";
     const rawDetails = bill.status === "parse_error" && bill.extraSummary
       ? `<details style="margin-top:6px"><summary class="sub" style="cursor:pointer">Xem extra_data Meta</summary><div class="sub" style="word-break:break-all;margin-top:4px">${escapeHtml(bill.extraSummary)}</div></details>` : "";
+    const invoiceLink = bill.downloadInvoiceLink
+      ? `<div style="margin-top:6px"><a class="sub" href="${escapeHtml(bill.downloadInvoiceLink)}" target="_blank" rel="noopener noreferrer">Mở bill PDF ↗</a></div>` : "";
     return `<div class="meta-billing-row">
-      <div><div class="title">${escapeHtml(bill.accountName || "Tài khoản quảng cáo")}</div><div class="sub">${escapeHtml(eventName)}</div><div class="sub">${escapeHtml(details || bill.eventType || "")}</div>${rawDetails}</div>
+      <div><div class="title">${escapeHtml(bill.accountName || "Tài khoản quảng cáo")}</div><div class="sub">${escapeHtml(eventName)}</div><div class="sub">${escapeHtml(details || bill.eventType || "")}</div>${rawDetails}${invoiceLink}</div>
       <div><span class="badge ${cls}">${escapeHtml(label)}</span>${recoveryNote ? `<div class="sub" style="color:${noteColor}">${escapeHtml(recoveryNote)}</div>` : ""}</div>
       <div class="date">${escapeHtml(formatAdsCheckDate(bill.eventTimeMs || bill.eventTime))}</div>
       <div class="amount">${escapeHtml(amountText)}</div>

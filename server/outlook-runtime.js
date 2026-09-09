@@ -1608,7 +1608,37 @@ function extractMoneyCandidatesFromText(text, currencyHint = "", sourceKey = "te
   return results;
 }
 
+
+function extractFacebookBillingToolAmount(extraData, currency, activity = {}) {
+  const eventType = String(activity?.event_type || "").trim();
+  if (eventType !== "ad_account_billing_charge") return null;
+  const data = extraData && typeof extraData === "object" ? extraData : safeJsonParse(extraData);
+  const type = String(data?.type || "").trim().toLowerCase();
+  const action = Number(data?.action);
+  if (type !== "payment_amount") return null;
+  // Facebook Billing Tool-compatible mapping observed in billing exports:
+  // ad_account_billing_charge + type=payment_amount + action=67 => new_value is the charged amount.
+  // action=67 is treated as the strongest signature, but type=payment_amount alone remains valid
+  // because Meta payload variants may omit action on some accounts/locales.
+  const resolvedCurrency = extractMetaBillingCurrency(data, currency);
+  const rawValue = data?.new_value ?? data?.value ?? data?.amount ?? data?.payment_amount;
+  const amount = parseLocaleMoneyString(rawValue, resolvedCurrency);
+  if (!(amount > 0)) return null;
+  return {
+    amount,
+    confidence: action === 67 ? "high" : "medium",
+    sourceKey: action === 67 ? "facebook_billing_tool:payment_amount/action_67/new_value" : "facebook_billing_tool:payment_amount/new_value",
+    currency: String(resolvedCurrency || currency || "").toUpperCase(),
+    action: Number.isFinite(action) ? action : null,
+    type,
+    value: amount,
+    totalValue: amount,
+  };
+}
+
 function extractMetaBillingAmount(extraData, currency, activity = {}) {
+  const fbtAmount = extractFacebookBillingToolAmount(extraData, currency, activity);
+  if (fbtAmount) return fbtAmount;
   const flat = flattenMetaBillingValues(extraData);
   const candidates = [];
   const exactAmountKey = /(?:^|\.)(?:amount|charge_amount|charged_amount|payment_amount|billing_amount|invoice_amount|total_amount|amount_charged|charged_total|payment_total|transaction_amount|bill_amount|value_amount|amount_paid|new_amount|charged_value|payment_value|billing_value)$/i;
@@ -1719,6 +1749,11 @@ function normalizeMetaBillingActivity(account, activity) {
   const txId = extractMetaBillingTextField(extraData, [/(?:transaction|payment|charge|invoice|receipt).*(?:id|number|ref)/i, /(?:fatura|invoice_id|transaction_id|payment_id|charge_id)/i]);
   const reference = extractMetaBillingTextField(extraData, [/(?:reference|ref_number|receipt|invoice_number)/i]);
   const cardLast4 = normalizeLast4(extractMetaBillingTextField(extraData, [/(?:last.?4|last_four|card.*digits|payment_method)/i]));
+  const billingType = String(extraData?.type || "").trim().toLowerCase();
+  const billingAction = Number(extraData?.action);
+  const downloadInvoiceLink = txId && accountId
+    ? `https://business.facebook.com/ads/manage/billing_transaction/?act=${encodeURIComponent(accountId)}&pdf=true&source=billing_summary&tx_type=3&txid=${encodeURIComponent(txId)}`
+    : "";
   const fingerprintSource = JSON.stringify({ accountId, eventType, eventTimeMs, objectId: activity?.object_id || "", txId, extraData });
   const eventId = sha256(fingerprintSource).slice(0, 40);
   return {
@@ -1741,6 +1776,11 @@ function normalizeMetaBillingActivity(account, activity) {
     objectName: String(activity?.object_name || "").slice(0, 200),
     objectType: String(activity?.object_type || "").slice(0, 80),
     extraData,
+    billingType,
+    billingAction: Number.isFinite(billingAction) ? billingAction : null,
+    billingValue: Number(amountInfo.amount || 0),
+    billingTotalValue: Number(amountInfo.amount || 0),
+    downloadInvoiceLink,
     isBillingEvent: META_BILLING_EVENT_TYPES.has(eventType),
     isSuccessfulCharge: META_BILLING_SUCCESS_TYPES.has(eventType),
   };
@@ -1988,6 +2028,11 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
       txId: raw.txId || "",
       reference: raw.reference || "",
       cardLast4: raw.cardLast4 || "",
+      billingType: raw.billingType || "",
+      billingAction: raw.billingAction == null ? null : Number(raw.billingAction),
+      billingValue: Number(raw.billingValue || raw.amount || 0),
+      billingTotalValue: Number(raw.billingTotalValue || raw.amount || 0),
+      downloadInvoiceLink: raw.downloadInvoiceLink || "",
       status: raw.status || "recognized",
       error: raw.error || "",
       transactionId: raw.transactionId || "",
@@ -2003,6 +2048,15 @@ function shouldRetryMetaBillingEvent(existingData = {}, event = {}) {
     && event.isSuccessfulCharge === true
     && status !== "auto_deducted"
     && status !== "linked_outlook";
+}
+
+
+function resolveMetaBillingSinceMs({ reason = "auto", lookbackFloor = 0, cursorMs = 0, parserRevision = 0 } = {}) {
+  // Manual sync is also a repair/backfill operation: always reload the configured lookback window.
+  // On parser upgrades, force one automatic backfill so old parse_error events are actually fetched again.
+  const forceBackfill = reason === "manual" || reason === "repair" || Number(parserRevision || 0) < 8;
+  if (forceBackfill) return Number(lookbackFloor || 0);
+  return Math.max(Number(lookbackFloor || 0), Number(cursorMs || 0) ? Number(cursorMs) - 20 * 60 * 1000 : 0);
 }
 
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
@@ -2065,7 +2119,12 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       const results = await Promise.all(chunk.map(async (account) => {
         const accountId = normalizeAccountId(account.accountId);
         const cursorMs = Number(accountCursors[accountId] || 0);
-        const sinceMs = Math.max(lookbackFloor, cursorMs ? cursorMs - 20 * 60 * 1000 : 0);
+        const sinceMs = resolveMetaBillingSinceMs({
+          reason,
+          lookbackFloor,
+          cursorMs,
+          parserRevision: Number(state.metaBillingParserRevision || 0),
+        });
         try {
           const events = await fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs);
           accountCursors[accountId] = now;
@@ -2234,6 +2293,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingSelectedAccountCount: config.selectionMode === "selected" ? allAccounts.length : discoveredAccounts.length,
       metaBillingScanCursor: nextScanCursor,
       metaBillingAccountCursors: accountCursors,
+      metaBillingParserRevision: 8,
       metaBillingAccountSnapshots: nextAccountSnapshots,
       metaBillingEventsFound: allEvents.length,
       metaBillingNewBills: newBills,
@@ -4296,7 +4356,9 @@ if (process.env.NODE_ENV === "test") {
   exports.__metaBillingTestHooks = {
     normalizeMetaBillingActivity,
     extractMetaBillingAmount,
+    extractFacebookBillingToolAmount,
     extractMetaBillingCurrency,
+    resolveMetaBillingSinceMs,
     normalizeMetaBillingConfig,
     shouldRetryMetaBillingEvent,
     tryParseEmbeddedMetaValue,

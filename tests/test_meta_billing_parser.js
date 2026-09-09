@@ -155,7 +155,37 @@ const typedPaymentAmount = hooks.normalizeMetaBillingActivity(
 );
 assert.equal(typedPaymentAmount.amount, 116651);
 assert.equal(typedPaymentAmount.amountConfidence, "high");
-assert.ok(/^type:payment_amount\./.test(typedPaymentAmount.amountSourceKey));
+assert.ok(/(?:^type:payment_amount\.|^facebook_billing_tool:payment_amount)/.test(typedPaymentAmount.amountSourceKey));
 assert.equal(typedPaymentAmount.txId, "28526254503727057-28472574245761751");
 
 console.log("PASS Meta Billing v6.1.7 payment_amount + retry fix");
+
+// v6.1.8: Facebook Billing Tool-compatible mapping + manual backfill.
+const fbtExact = hooks.normalizeMetaBillingActivity(
+  { accountId: "1728828071611455", name: "Acc LA", currency: "VND" },
+  {
+    event_type: "ad_account_billing_charge",
+    event_time: Math.floor(Date.now()/1000),
+    extra_data: {
+      type: "payment_amount",
+      action: 67,
+      currency: "VND",
+      new_value: "116651",
+      transaction_id: "28526254503727057-28472574245761751"
+    }
+  }
+);
+assert.equal(fbtExact.amount, 116651);
+assert.equal(fbtExact.amountConfidence, "high");
+assert.equal(fbtExact.amountSourceKey, "facebook_billing_tool:payment_amount/action_67/new_value");
+assert.equal(fbtExact.billingType, "payment_amount");
+assert.equal(fbtExact.billingAction, 67);
+assert.ok(fbtExact.downloadInvoiceLink.includes("txid=28526254503727057-28472574245761751"));
+
+const lookback = 1_000_000;
+const cursor = 9_000_000;
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "manual", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), lookback);
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 7 }), lookback);
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), cursor - 20*60*1000);
+
+console.log("PASS Meta Billing v6.1.8 FBT-compatible parser + backfill");
