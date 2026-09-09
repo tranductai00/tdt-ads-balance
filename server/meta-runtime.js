@@ -495,10 +495,24 @@ function applyManualAdAccountEdit(payloadInput, editInput = {}) {
 
   const bankId = String(editInput.bankId ?? "").trim();
   if (bankId && !payload.banks.some((bank) => String(bank?.id || "") === bankId)) {
-    const error = new Error("Ngân hàng được chọn không còn tồn tại. Hãy tải lại dữ liệu rồi chọn lại.");
-    error.status = 409;
-    error.code = "BANK_NOT_FOUND";
-    throw error;
+    // v7.0.5: nếu nguồn tiền vừa được tạo ở client nhưng auto-save workspace chưa kịp chạy,
+    // nhận snapshot của đúng nguồn tiền đang chọn và upsert atomically cùng thao tác sửa TKQC.
+    const bankSnapshot = editInput.bankSnapshot && typeof editInput.bankSnapshot === "object" ? editInput.bankSnapshot : null;
+    const snapshotId = String(bankSnapshot?.id || "").trim();
+    const snapshotName = String(bankSnapshot?.name || "").trim().slice(0, 160);
+    if (snapshotId === bankId && snapshotName) {
+      payload.banks.unshift({
+        id: snapshotId,
+        name: snapshotName,
+        number: String(bankSnapshot?.number || "").trim().slice(0, 120),
+        initialBalance: Math.max(0, Math.round(cleanPositiveNumber(bankSnapshot?.initialBalance))),
+      });
+    } else {
+      const error = new Error("Nguồn tiền được chọn chưa có trên cloud. Hãy tải lại dữ liệu hoặc tạo lại nguồn tiền rồi thử lại.");
+      error.status = 409;
+      error.code = "BANK_NOT_FOUND";
+      throw error;
+    }
   }
 
   const threshold = Math.max(0, Math.round(cleanPositiveNumber(editInput.threshold)));
@@ -525,6 +539,50 @@ function applyManualAdAccountEdit(payloadInput, editInput = {}) {
     payload.settings.deletedAdAccountIds = payload.settings.deletedAdAccountIds.filter((item) => normalizeAccountId(item) !== newAccountId);
   }
 
+  return { payload, ad: JSON.parse(JSON.stringify(ad)) };
+}
+
+function applyAdFundingSourceEdit(payloadInput, editInput = {}) {
+  const source = getPayload(payloadInput || {});
+  const payload = JSON.parse(JSON.stringify(source));
+  const targetId = String(editInput.id || editInput.adId || "").trim();
+  const stableMetaAccountId = normalizeAccountId(editInput.metaAccountId || editInput.metaId || "");
+  const currentAccountId = normalizeAccountId(editInput.currentAccountId || editInput.accountId || "");
+  let ad = targetId ? payload.adAccounts.find((item) => String(item?.id || "") === targetId) : null;
+  if (!ad && stableMetaAccountId) ad = payload.adAccounts.find((item) => normalizeAccountId(item?.metaAccountId || item?.accountId) === stableMetaAccountId);
+  if (!ad && currentAccountId) ad = payload.adAccounts.find((item) => normalizeAccountId(item?.accountId) === currentAccountId);
+  if (!ad) {
+    const error = new Error("Không tìm thấy tài khoản quảng cáo để gắn nguồn tiền. Hãy đồng bộ Meta API rồi thử lại.");
+    error.status = 404;
+    error.code = "AD_ACCOUNT_NOT_FOUND";
+    throw error;
+  }
+
+  const bankId = String(editInput.bankId ?? "").trim();
+  if (bankId && !payload.banks.some((bank) => String(bank?.id || "") === bankId)) {
+    const bankSnapshot = editInput.bankSnapshot && typeof editInput.bankSnapshot === "object" ? editInput.bankSnapshot : null;
+    const snapshotId = String(bankSnapshot?.id || "").trim();
+    const snapshotName = String(bankSnapshot?.name || "").trim().slice(0, 160);
+    if (snapshotId === bankId && snapshotName) {
+      payload.banks.unshift({
+        id: snapshotId,
+        name: snapshotName,
+        number: String(bankSnapshot?.number || "").trim().slice(0, 120),
+        initialBalance: Math.max(0, Math.round(cleanPositiveNumber(bankSnapshot?.initialBalance))),
+      });
+    } else {
+      const error = new Error("Nguồn tiền được chọn không còn tồn tại trên cloud.");
+      error.status = 409;
+      error.code = "BANK_NOT_FOUND";
+      throw error;
+    }
+  }
+
+  const nowIso = new Date().toISOString();
+  ad.bankId = bankId;
+  ad.manualBankOverride = true;
+  ad.manualEditedAt = nowIso;
+  ad.manualEditRevision = Number(ad.manualEditRevision || 0) + 1;
   return { payload, ad: JSON.parse(JSON.stringify(ad)) };
 }
 
@@ -3499,7 +3557,7 @@ exports.metaBridge = onRequest({
     const action = String(req.query.action || body.action || "metaApiStatus");
     const metaOnlyActions = new Set([
       "deviceStatus", "listDevices", "removeDevice", "removeOtherDevices", "createPairingCode", "joinDevice",
-      "adAccountManualUpdate", "workspaceGet", "workspaceSet",
+      "adAccountManualUpdate", "adAccountSetFundingSource", "workspaceGet", "workspaceSet",
       "metaApiStatus", "metaApiConfigure", "metaApiSync",
       "metaBillingStatus", "metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "metaBillingSync"
     ]);
@@ -3731,6 +3789,29 @@ exports.metaBridge = onRequest({
         authorized: true,
         deviceId: deviceIdFromHash(newHash),
         message: "Thiết bị đã được cấp quyền thành công.",
+      });
+    }
+
+    if (action === "adAccountSetFundingSource") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      let updatedAd = null;
+      let savedPayload = null;
+      let destinationRef = db.collection(WORKSPACES).doc(workspace);
+      await db.runTransaction(async (transaction) => {
+        const workspaceRecord = await getWorkspaceSnapshot(transaction, workspace);
+        destinationRef = workspaceRecord.ref;
+        const result = applyAdFundingSourceEdit(workspaceRecord.data || {}, body.edit || body.adAccount || {});
+        updatedAd = result.ad;
+        savedPayload = result.payload;
+        transaction.set(destinationRef, { payload: savedPayload, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      });
+      const next = await destinationRef.get();
+      return sendJson(res, 200, {
+        ok: true,
+        saved: true,
+        ad: updatedAd,
+        payload: savedPayload,
+        updatedAtMs: timestampToMs(next.data()?.updatedAt) || Date.now(),
       });
     }
 
@@ -4254,6 +4335,7 @@ if (process.env.NODE_ENV === "test") {
     shouldRetryMetaBillingEvent,
     mergeConcurrentWorkspacePayload,
     applyManualAdAccountEdit,
+    applyAdFundingSourceEdit,
     getValidFundingSource,
     mergeMetaAccountsIntoPayload,
     deriveMetaBillingProfile,

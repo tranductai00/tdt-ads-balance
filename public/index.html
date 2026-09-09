@@ -798,6 +798,11 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
   .bank-visual-card::after{display:none!important}
 }
 
+
+    .ad-source-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:min(100%,320px)}
+    .ad-source-inline select{min-width:180px;max-width:260px;padding:9px 34px 9px 12px;border-radius:14px}
+    .ad-source-inline .source-current{font-size:12px;color:var(--muted);width:100%}
+    @media(max-width:760px){.ad-source-inline{width:100%;margin-top:8px}.ad-source-inline select{flex:1;min-width:0;max-width:none}.tx>.right{flex-wrap:wrap}.tx>.right .ad-source-inline{order:5}}
 </style>
 </head>
 <body><div class="ambient-stage" aria-hidden="true"><span class="ambient-object ambient-orb"></span><span class="ambient-object ambient-ring"></span><span class="ambient-object ambient-cube"></span><span class="ambient-object ambient-bubble"></span></div>
@@ -3157,7 +3162,14 @@ function render() {
     const st = getAdStatus(ad);
     const item = document.createElement("div");
     item.className = "tx";
-    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn ngân hàng")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.metaLastSyncAt ? ` · Meta API: ${money(ad.metaApiBalance ?? 0)}${ad.metaCurrency ? " " + escapeHtml(ad.metaCurrency) : ""} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button type="button" class="small secondary" data-edit-ad="${ad.id}" aria-label="Sửa tài khoản quảng cáo">Sửa</button><button type="button" class="small danger" data-delete-ad="${ad.id}">Xóa</button></div>`;
+    const fundingOptions = [
+      `<option value="">Không gắn nguồn tiền</option>`,
+      ...data.banks.map((source) => `<option value="${escapeHtml(source.id)}" ${source.id === ad.bankId ? "selected" : ""}>${escapeHtml(source.name)}${source.number ? " - " + escapeHtml(source.number) : ""}</option>`)
+    ].join("");
+    const fundingControl = data.banks.length
+      ? `<div class="ad-source-inline"><select data-funding-select="${escapeHtml(ad.id)}" aria-label="Nguồn tiền của ${escapeHtml(ad.name)}">${fundingOptions}</select><button type="button" class="small primary" data-save-funding="${escapeHtml(ad.id)}">${ad.bankId ? "Cập nhật nguồn" : "Gắn nguồn tiền"}</button><div class="source-current">${bank ? `Đang dùng: ${escapeHtml(bank.name)}` : "Chưa gắn nguồn tiền"}</div></div>`
+      : `<div class="ad-source-inline"><button type="button" class="small primary" data-nav-section="banks">+ Thêm nguồn tiền trước</button><div class="source-current">Chưa có nguồn tiền nào để gắn</div></div>`;
+    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn nguồn tiền")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.metaLastSyncAt ? ` · Meta API: ${money(ad.metaApiBalance ?? 0)}${ad.metaCurrency ? " " + escapeHtml(ad.metaCurrency) : ""} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button type="button" class="small secondary" data-edit-ad="${escapeHtml(ad.id)}" aria-label="Sửa tài khoản quảng cáo">Sửa</button><button type="button" class="small danger" data-delete-ad="${escapeHtml(ad.id)}">Xóa</button>${fundingControl}</div>`;
     adMenuList.appendChild(item);
   });
 
@@ -3485,6 +3497,7 @@ async function saveAdEdit() {
   const duplicate = accountId && data.adAccounts.find((item) => item.id !== ad.id && normalizeAdAccountId(item.accountId) === accountId);
   if (duplicate) return alert("Mã tài khoản quảng cáo này đã tồn tại.");
 
+  const selectedBank = bankId ? data.banks.find((bank) => bank.id === bankId) : null;
   const editPayload = {
     id: ad.id,
     metaAccountId: normalizeAdAccountId(ad.metaAccountId || ad.accountId),
@@ -3492,6 +3505,7 @@ async function saveAdEdit() {
     name,
     accountId,
     bankId,
+    bankSnapshot: selectedBank ? { id: selectedBank.id, name: selectedBank.name, number: selectedBank.number || "", initialBalance: Number(selectedBank.initialBalance || 0) } : null,
     threshold,
   };
 
@@ -3543,6 +3557,54 @@ async function saveAdEdit() {
   } finally {
     const currentButton = el("btnSaveAdEdit");
     if (currentButton) { currentButton.disabled = false; currentButton.textContent = "Lưu thay đổi"; }
+  }
+}
+
+async function saveAdFundingSource(adId) {
+  const ad = data.adAccounts.find((item) => String(item.id) === String(adId));
+  if (!ad) return alert("Không tìm thấy tài khoản quảng cáo.");
+  const select = [...document.querySelectorAll("[data-funding-select]")].find((node) => String(node.dataset.fundingSelect) === String(adId));
+  if (!select) return alert("Không tìm thấy danh sách nguồn tiền.");
+  const bankId = String(select.value || "");
+  const selectedBank = bankId ? data.banks.find((bank) => String(bank.id) === bankId) : null;
+  const button = [...document.querySelectorAll("[data-save-funding]")].find((node) => String(node.dataset.saveFunding) === String(adId));
+  if (button) { button.disabled = true; button.textContent = "Đang lưu..."; }
+  try {
+    if (cloudReady) {
+      const result = await callMetaBridge("adAccountSetFundingSource", {
+        edit: {
+          id: ad.id,
+          metaAccountId: normalizeAdAccountId(ad.metaAccountId || ad.accountId),
+          currentAccountId: normalizeAdAccountId(ad.accountId),
+          bankId,
+          bankSnapshot: selectedBank ? { id: selectedBank.id, name: selectedBank.name, number: selectedBank.number || "", initialBalance: Number(selectedBank.initialBalance || 0) } : null,
+        }
+      });
+      cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
+      if (result.payload) applyIncomingData(result.payload, "");
+      else {
+        ad.bankId = bankId;
+        ad.manualBankOverride = true;
+        saveLocal();
+        render();
+      }
+      showStatus(bankId ? `Đã gắn nguồn tiền ${selectedBank?.name || ""} cho ${ad.name}.` : `Đã bỏ gắn nguồn tiền khỏi ${ad.name}.`);
+    } else {
+      ad.bankId = bankId;
+      ad.manualBankOverride = true;
+      ad.manualEditedAt = new Date().toISOString();
+      saveLocal();
+      render();
+      scheduleCloudSave();
+      showStatus("Đã cập nhật nguồn tiền trên thiết bị.");
+    }
+  } catch (error) {
+    console.error("saveAdFundingSource", error);
+    alert(error?.message || "Không gắn được nguồn tiền.");
+    showStatus(error?.message || "Không gắn được nguồn tiền.", true);
+  } finally {
+    const currentButton = [...document.querySelectorAll("[data-save-funding]")].find((node) => String(node.dataset.saveFunding) === String(adId));
+    if (currentButton) { currentButton.disabled = false; currentButton.textContent = bankId ? "Cập nhật nguồn" : "Gắn nguồn tiền"; }
   }
 }
 
@@ -3679,6 +3741,14 @@ document.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
   openAdModal(editButton.dataset.editAd);
+}, true);
+
+document.addEventListener("click", (event) => {
+  const fundingButton = event.target?.closest?.("[data-save-funding]");
+  if (!fundingButton) return;
+  event.preventDefault();
+  event.stopPropagation();
+  saveAdFundingSource(fundingButton.dataset.saveFunding);
 }, true);
 
 el("btnSaveAdEdit").addEventListener("click", saveAdEdit);

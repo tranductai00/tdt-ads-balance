@@ -20,3 +20,10 @@
 - Lưu/test/tải danh sách Meta API đều tự import tài khoản mới.
 - Cron Meta account sync riêng: `/cron/meta-accounts`.
 - Giữ parser Facebook Billing Tool `payment_amount/action=67/new_value`.
+
+## v7.0.5
+- Thêm `adAccountSetFundingSource` để gắn/bỏ nguồn tiền atomically cho một TKQC.
+- Thêm dropdown + nút gắn nguồn tiền trực tiếp trên danh sách TKQC.
+- Modal Sửa gửi `bankSnapshot` để xử lý nguồn tiền vừa tạo chưa autosave lên cloud.
+- Backend tự upsert `bankSnapshot` hợp lệ trong cùng transaction.
+- Giữ `manualBankOverride` để Meta API không ghi đè nguồn tiền sửa thủ công.

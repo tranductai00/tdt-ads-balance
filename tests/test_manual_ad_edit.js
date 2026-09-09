@@ -90,3 +90,43 @@ assert.equal(hooks.getValidFundingSource({ banks: [{ id: "b1" }] }, { bankId: "m
 assert.equal(hooks.getValidFundingSource({ banks: [{ id: "b1" }] }, { bankId: "b1" }).id, "b1");
 
 console.log("PASS v7.0.3 stable Meta manual edit + funding source validation");
+
+
+// v7.0.5: gắn nguồn tiền atomically bằng endpoint riêng, không phụ thuộc toàn bộ modal edit.
+assert(hooks.applyAdFundingSourceEdit, "missing applyAdFundingSourceEdit hook");
+const fundingAttached = hooks.applyAdFundingSourceEdit({
+  banks: [{ id: "bank-main", name: "VPBANK - LA", number: "6952" }],
+  adAccounts: [{ id: "ad-meta-1", name: "LA - TDT ADS", accountId: "1701141704298014", metaAccountId: "1701141704298014", bankId: "", threshold: 34365 }],
+  transactions: [], settings: {}
+}, {
+  id: "stale-ui-id",
+  metaAccountId: "1701141704298014",
+  currentAccountId: "1701141704298014",
+  bankId: "bank-main",
+});
+assert.equal(fundingAttached.ad.bankId, "bank-main");
+assert.equal(fundingAttached.ad.manualBankOverride, true);
+assert.equal(fundingAttached.ad.name, "LA - TDT ADS");
+assert.equal(fundingAttached.ad.threshold, 34365);
+
+const sourceUpsert = hooks.applyAdFundingSourceEdit({
+  banks: [],
+  adAccounts: [{ id: "ad-meta-2", name: "TAI-BOOM", accountId: "1455001556459898", metaAccountId: "1455001556459898", bankId: "" }],
+  transactions: [], settings: {}
+}, {
+  metaAccountId: "1455001556459898",
+  bankId: "new-source",
+  bankSnapshot: { id: "new-source", name: "Nguồn tiền mới", number: "0805", initialBalance: 1000000 },
+});
+assert.equal(sourceUpsert.ad.bankId, "new-source");
+assert.equal(sourceUpsert.payload.banks.length, 1, "selected source snapshot should be upserted atomically when cloud autosave is behind");
+assert.equal(sourceUpsert.payload.banks[0].name, "Nguồn tiền mới");
+
+const sourceDetached = hooks.applyAdFundingSourceEdit(fundingAttached.payload, {
+  metaAccountId: "1701141704298014",
+  bankId: "",
+});
+assert.equal(sourceDetached.ad.bankId, "");
+assert.equal(sourceDetached.ad.manualBankOverride, true);
+
+console.log("PASS v7.0.5 direct funding-source attach/detach + bank snapshot upsert");

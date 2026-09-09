@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-only",
-  "version": "7.0.4",
+  "version": "7.0.5",
   "private": true,
-  "description": "T Balance v7.0.4 Meta-only - enrich Meta API accounts with funding source and billing activity profile for threshold, remaining, card and next billing info",
+  "description": "T Balance v7.0.5 Meta-only - direct atomic funding-source attach/detach for ad accounts and reliable manual edit",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
