@@ -91,7 +91,7 @@ app.get("/healthz", async (_req, res) => {
   const ok = database.ok === true;
   res.status(ok ? 200 : 503).json({
     ok,
-    service: "T Balance v6.1.4 Outlook Bridge 404 Fix",
+    service: "T Balance v6.1.5 Outlook Bridge 500 Fix",
     startedAt: STARTED_AT,
     node: process.version,
     storage: "postgresql",

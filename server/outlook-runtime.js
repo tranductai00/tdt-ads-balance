@@ -158,15 +158,50 @@ function normalizeReturnUrl(value) {
   return url.toString();
 }
 
+function setResponseHeader(res, name, value) {
+  // Express Response and VercelResponse both inherit Node's setHeader().
+  // Do not use Express-only res.set() in explicit /api Functions.
+  if (typeof res?.setHeader === "function") {
+    res.setHeader(name, value);
+    return;
+  }
+  if (typeof res?.set === "function") {
+    res.set(name, value);
+  }
+}
+
+function setResponseStatus(res, status) {
+  const code = Number(status || 200);
+  if (typeof res?.status === "function") return res.status(code);
+  res.statusCode = code;
+  return res;
+}
+
+function sendResponseText(res, status, value, contentType = "text/plain; charset=utf-8") {
+  setResponseHeader(res, "Content-Type", contentType);
+  if (typeof res?.status === "function" && typeof res?.send === "function") {
+    return res.status(status).send(String(value ?? ""));
+  }
+  res.statusCode = Number(status || 200);
+  if (typeof res?.end === "function") return res.end(String(value ?? ""));
+}
+
+function redirectResponse(res, url, status = 302) {
+  if (typeof res?.redirect === "function") return res.redirect(status, url);
+  res.statusCode = Number(status || 302);
+  setResponseHeader(res, "Location", String(url || "/"));
+  if (typeof res?.end === "function") return res.end("");
+}
+
 function setCors(req, res) {
   const origin = String(req.headers.origin || "");
   if (allowedWebOrigins().has(origin) || origin.startsWith("chrome-extension://")) {
-    res.set("Access-Control-Allow-Origin", origin);
+    setResponseHeader(res, "Access-Control-Allow-Origin", origin);
   }
-  res.set("Vary", "Origin");
-  res.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  res.set("Access-Control-Allow-Headers", "Content-Type, X-Device-Name, Cache-Control");
-  res.set("Cache-Control", "no-store");
+  setResponseHeader(res, "Vary", "Origin");
+  setResponseHeader(res, "Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  setResponseHeader(res, "Access-Control-Allow-Headers", "Content-Type, X-Device-Name, Cache-Control");
+  setResponseHeader(res, "Cache-Control", "no-store");
 }
 
 // v6.1.2: Web UI cùng origin được tự khôi phục/cấp quyền thiết bị.
@@ -193,7 +228,12 @@ function isTrustedWebClient(req, body = {}) {
 }
 
 function sendJson(res, status, payload) {
-  res.status(status).json(payload);
+  setResponseHeader(res, "Content-Type", "application/json; charset=utf-8");
+  if (typeof res?.status === "function" && typeof res?.json === "function") {
+    return res.status(status).json(payload);
+  }
+  res.statusCode = Number(status || 200);
+  if (typeof res?.end === "function") return res.end(JSON.stringify(payload));
 }
 
 async function parseJsonBody(req) {
@@ -2690,7 +2730,7 @@ exports.outlookBridge = onRequest({
   secrets: [MS_CLIENT_ID, MS_CLIENT_SECRET, OUTLOOK_TOKEN_KEY],
 }, async (req, res) => {
   setCors(req, res);
-  if (req.method === "OPTIONS") return res.status(204).send("");
+  if (req.method === "OPTIONS") return sendResponseText(res, 204, "");
   try {
     const body = await parseJsonBody(req);
     const action = String(req.query.action || body.action || "status");
@@ -2735,7 +2775,7 @@ exports.outlookBridge = onRequest({
       authUrl.searchParams.set("scope", GRAPH_SCOPE);
       authUrl.searchParams.set("state", state);
       authUrl.searchParams.set("prompt", "select_account");
-      return res.redirect(authUrl.toString());
+      return redirectResponse(res, authUrl.toString());
     }
 
     const workspace = normalizeWorkspace(body.workspace || req.query.workspace);
@@ -3623,7 +3663,7 @@ exports.outlookOAuthCallback = onRequest({
       const target = new URL(returnUrl);
       target.searchParams.set("outlook", "error");
       target.searchParams.set("message", errorText.slice(0, 300));
-      return res.redirect(target.toString());
+      return redirectResponse(res, target.toString());
     }
     if (!code) throw new Error("Microsoft không trả về authorization code.");
 
@@ -3688,13 +3728,13 @@ exports.outlookOAuthCallback = onRequest({
 
     const target = new URL(returnUrl);
     target.searchParams.set("outlook", "connected");
-    return res.redirect(target.toString());
+    return redirectResponse(res, target.toString());
   } catch (error) {
     console.error("outlookOAuthCallback", error);
     const fallback = configuredWebUrl();
     fallback.searchParams.set("outlook", "error");
     fallback.searchParams.set("message", String(error.message || "Lỗi kết nối Outlook").slice(0, 300));
-    return res.redirect(fallback.toString());
+    return redirectResponse(res, fallback.toString());
   }
 });
 
@@ -3706,8 +3746,7 @@ exports.outlookWebhook = onRequest({
 }, async (req, res) => {
   const validationToken = req.query.validationToken;
   if (validationToken) {
-    res.set("Content-Type", "text/plain");
-    return res.status(200).send(String(validationToken));
+    return sendResponseText(res, 200, String(validationToken));
   }
   try {
     const notifications = Array.isArray(req.body?.value) ? req.body.value : [];
@@ -3734,10 +3773,10 @@ exports.outlookWebhook = onRequest({
         console.error("Lỗi notification Outlook:", itemError);
       }
     }
-    return res.status(202).send("");
+    return sendResponseText(res, 202, "");
   } catch (error) {
     console.error("outlookWebhook", error);
-    return res.status(202).send("");
+    return sendResponseText(res, 202, "");
   }
 });
 

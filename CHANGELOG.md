@@ -58,3 +58,11 @@
 - Added legacy route rewrites so existing Microsoft redirect/webhook URLs keep working.
 - Added Express aliases for both legacy and `/api/...` paths.
 - Added `/api/healthz` route for platform routing diagnostics.
+
+## v6.1.5 — Outlook Bridge HTTP 500 Fix
+- Fix `res.set()` Express-only trong explicit Vercel Functions.
+- Dùng `setHeader/statusCode/end` tương thích Express + VercelResponse.
+- Fix cùng lỗi ở Microsoft webhook validation.
+- Lazy-load Outlook runtime trong `/api/outlookBridge`, `/api/outlookWebhook`, `/api/outlookOAuthCallback`.
+- Runtime/dependency init error giờ trả JSON có `code` + diagnostic thay vì HTTP 500 trống.
+- `/api/healthz` bổ sung kiểm tra dependency `pg`, `web-push` và trạng thái biến môi trường (chỉ boolean, không lộ secret).
