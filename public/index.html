@@ -2804,17 +2804,19 @@ function dashboardAdFinancialState(ad) {
   const bank = getAdLinkedBank(ad);
   const bankBalance = bank ? Number(dashboardBankBalanceCache.get(bank.id) ?? getBankBalance(bank)) : 0;
   const required = getThresholdCharge(ad);
-  const shortage = Math.max(0, required - bankBalance);
-  const threshold = Number(ad.threshold || ad.adsCheck?.threshold || 0);
+  const shortage = bank ? Math.max(0, required - bankBalance) : 0;
+  const threshold = Number(ad.threshold || ad.metaApi?.threshold || ad.adsCheck?.threshold || 0);
   const balance = adAccountBalance(ad);
   const progress = threshold > 0 ? Math.max(0, Math.min(100, balance / threshold * 100)) : 0;
-  const status = threshold <= 0
-    ? { text: "Ổn", cls: "ok" }
-    : bankBalance < required
-      ? { text: "Không đủ để thanh toán", cls: "bad" }
-      : bankBalance <= required * 1.2
-        ? { text: "Sát ngưỡng an toàn", cls: "warn" }
-        : { text: "Đủ để thanh toán", cls: "ok" };
+  const status = !bank
+    ? { text: "Chưa gắn nguồn tiền", cls: "warn" }
+    : threshold <= 0
+      ? { text: "Đã gắn nguồn tiền", cls: "ok" }
+      : bankBalance < required
+        ? { text: "Không đủ để thanh toán", cls: "bad" }
+        : bankBalance <= required * 1.2
+          ? { text: "Sát ngưỡng an toàn", cls: "warn" }
+          : { text: "Đủ để thanh toán", cls: "ok" };
   const result = { bank, bankBalance, required, shortage, threshold, balance, progress, status };
   if (cacheKey) dashboardAdStateCache.set(cacheKey, result);
   return result;
@@ -2848,6 +2850,14 @@ function renderDashboardAdCards(accounts) {
   grid.innerHTML = accounts.map((ad) => {
     const state = dashboardAdFinancialState(ad);
     const last4 = ad.paymentCardLast4 || ad.metaApi?.cardLast4 || "----";
+    const nextBillingText = ad.billingNextDate
+      ? formatBillingDate(ad.billingNextDate)
+      : (ad.billingNextDateText || ad.metaApi?.nextBillingDateText || (state.threshold > 0 ? "Khi đạt ngưỡng" : "—"));
+    const thresholdSourceText = ad.manualThresholdOverride
+      ? "Thủ công"
+      : (ad.metaThresholdSource === "meta_billing_activity" || ad.metaApi?.thresholdSource === "meta_billing_activity")
+        ? "Meta API · Billing"
+        : ad.metaLastSyncAt ? "Meta API" : "Thủ công";
     return `<article class="ad-balance-card ${state.shortage > 0 ? "risk" : ""}">
       <div class="ad-card-top"><div><div class="ad-card-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="ad-card-id">${escapeHtml(ad.accountId || "Chưa có ID")}</div></div></div>
       <div class="ad-card-balance">${money(state.balance)}</div><div class="ad-card-caption">Số dư tài khoản quảng cáo hiện tại</div>
@@ -2856,9 +2866,9 @@ function renderDashboardAdCards(accounts) {
         <div><div class="k">Ngưỡng</div><div class="v">${money(state.threshold)}</div></div>
         <div><div class="k">Còn lại</div><div class="v">${money(adRemainingThreshold(ad))}</div></div>
         <div><div class="k">Thẻ liên kết</div><div class="v">${escapeHtml(ad.paymentCardBrand || "")} •••• ${escapeHtml(last4)}</div></div>
-        <div><div class="k">Nguồn tiền</div><div class="v" style="color:${state.shortage > 0 ? "var(--bad)" : "var(--ok)"}">${state.shortage > 0 ? `Thiếu ${money(state.shortage)}` : "Đủ thanh toán"}</div></div>
-        <div><div class="k">Ngày thu tiếp</div><div class="v">${escapeHtml(formatBillingDate(ad.billingNextDate || ad.billingNextDateText))}</div></div>
-        <div><div class="k">Nguồn ngưỡng</div><div class="v">${ad.metaLastSyncAt ? "Meta API" : "Thủ công"}</div></div>
+        <div><div class="k">Nguồn tiền</div><div class="v" style="color:${state.status.cls === "bad" ? "var(--bad)" : state.status.cls === "warn" ? "var(--warn)" : "var(--ok)"}">${escapeHtml(state.status.text)}${state.bank && state.shortage > 0 ? ` · Thiếu ${money(state.shortage)}` : ""}</div></div>
+        <div><div class="k">Ngày thu tiếp</div><div class="v">${escapeHtml(nextBillingText)}</div></div>
+        <div><div class="k">Nguồn ngưỡng</div><div class="v">${escapeHtml(thresholdSourceText)}</div></div>
       </div>
     </article>`;
   }).join("");

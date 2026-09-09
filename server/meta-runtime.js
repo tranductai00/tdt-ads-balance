@@ -1209,11 +1209,15 @@ function normalizeAdsCheckAccount(value) {
     balance: cleanPositiveNumber(value?.balance),
     threshold: cleanPositiveNumber(value?.threshold),
     remainingThreshold: cleanPositiveNumber(value?.remainingThreshold),
+    thresholdSource: String(value?.thresholdSource || "").trim().slice(0, 80),
+    thresholdConfidence: String(value?.thresholdConfidence || "").trim().slice(0, 30),
     cardLast4: normalizeLast4(value?.cardLast4),
     cardBrand: normalizeCardBrand(value?.cardBrand || value?.paymentMethodBrand),
     paymentMethodText: String(value?.paymentMethodText || "").trim().slice(0, 160),
     nextBillingDate: normalizeBillingDate(value?.nextBillingDate),
     nextBillingDateText: String(value?.nextBillingDateText || value?.nextBillingDate || "").trim().slice(0, 100),
+    billingMode: String(value?.billingMode || "").trim().slice(0, 60),
+    isPrepayAccount: value?.isPrepayAccount === true,
     limit: cleanPositiveNumber(value?.limit),
     currency: String(value?.currency || "").trim().slice(0, 20),
     amountSpent: cleanPositiveNumber(value?.amountSpent),
@@ -1342,6 +1346,126 @@ async function validateMetaAccessToken(accessToken, graphVersion) {
   return { id: String(profile.id || ""), name: String(profile.name || "").slice(0, 160) };
 }
 
+
+function metaBillingDateCandidate(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value === "number" || /^\d{10,13}$/.test(String(value).trim())) {
+    const raw = Number(value);
+    const ms = raw > 1e12 ? raw : raw * 1000;
+    if (Number.isFinite(ms) && ms > 0) return new Date(ms).toISOString().slice(0, 10);
+  }
+  const raw = String(value).trim();
+  const direct = normalizeBillingDate(raw);
+  if (direct) return direct;
+  const dmy = raw.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b/);
+  if (dmy) return `${dmy[3]}-${String(dmy[2]).padStart(2, "0")}-${String(dmy[1]).padStart(2, "0")}`;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : "";
+}
+
+function deriveMetaBillingProfile(account, activities = []) {
+  const successful = (Array.isArray(activities) ? activities : [])
+    .filter((event) => event?.isSuccessfulCharge && Number(event?.amount || 0) > 0)
+    .sort((a, b) => Number(b.eventTimeMs || 0) - Number(a.eventTimeMs || 0));
+
+  let threshold = 0;
+  let thresholdConfidence = "";
+  let thresholdSource = "";
+  if (successful.length) {
+    const recent = successful.slice(0, 8).map((event) => Number(event.amount || 0)).filter((n) => n > 0);
+    const latest = recent[0] || 0;
+    const sameAsLatest = recent.filter((amount) => latest > 0 && Math.abs(amount - latest) / latest <= 0.02);
+    if (sameAsLatest.length >= 2) {
+      threshold = Math.round(sameAsLatest.reduce((sum, n) => sum + n, 0) / sameAsLatest.length);
+      thresholdConfidence = "high";
+    } else {
+      // Payment thresholds generally progress upward; max recent successful threshold charge
+      // is a safer estimate than a small monthly catch-up charge.
+      threshold = Math.round(Math.max(...recent));
+      thresholdConfidence = "medium";
+    }
+    thresholdSource = "meta_billing_activity";
+  }
+
+  let nextBillingDate = "";
+  for (const event of (Array.isArray(activities) ? activities : [])) {
+    const flat = flattenMetaBillingValues(event?.extraData || {});
+    for (const item of flat) {
+      if (!/(?:next.*(?:bill|billing|charge|payment)|(?:bill|billing|charge|payment).*next|due_date|payment_due|billing_date|bill_date)/i.test(String(item.key || ""))) continue;
+      const date = metaBillingDateCandidate(item.value);
+      if (date && (!nextBillingDate || date > nextBillingDate)) nextBillingDate = date;
+    }
+  }
+
+  const balance = cleanPositiveNumber(account?.balance);
+  const remainingThreshold = threshold > 0 ? Math.max(0, Math.round(threshold - balance)) : 0;
+  return {
+    threshold,
+    remainingThreshold,
+    thresholdSource,
+    thresholdConfidence,
+    nextBillingDate,
+    nextBillingDateText: nextBillingDate ? "" : (threshold > 0 ? "Khi đạt ngưỡng hoặc kỳ thanh toán tháng" : ""),
+    billingMode: threshold > 0 ? "threshold_or_monthly" : "",
+    latestChargeAmount: successful[0]?.amount || 0,
+    latestChargeAt: successful[0]?.eventTime || "",
+  };
+}
+
+async function fetchMetaAdAccountDetails(account, accessToken, graphVersion) {
+  const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
+  if (!accountId) return account;
+  const richFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,funding_source,funding_source_details,is_prepay_account,show_checkout_experience,business{id,name}";
+  const safeFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,funding_source,is_prepay_account,business{id,name}";
+  let item = null;
+  try { item = await metaGraphRequest(`/act_${accountId}`, accessToken, graphVersion, { fields: richFields }); }
+  catch {
+    try { item = await metaGraphRequest(`/act_${accountId}`, accessToken, graphVersion, { fields: safeFields }); }
+    catch { return account; }
+  }
+  const currency = String(item?.currency || account?.currency || "").toUpperCase();
+  const funding = metaFundingDetails(item?.funding_source_details);
+  return {
+    ...account,
+    name: String(item?.name || account?.name || accountId).slice(0, 160),
+    status: metaAccountStatusLabel(item?.account_status || account?.account_status),
+    ownerId: normalizeAccountId(item?.business?.id || account?.ownerId),
+    balance: metaMoneyToMajor(item?.balance ?? account?.balance, currency),
+    limit: metaMoneyToMajor(item?.spend_cap ?? account?.limit, currency),
+    amountSpent: metaMoneyToMajor(item?.amount_spent ?? account?.amountSpent, currency),
+    currency,
+    cardLast4: funding.last4 || account?.cardLast4 || "",
+    cardBrand: normalizeCardBrand(funding.display || account?.cardBrand || ""),
+    paymentMethodText: funding.display || account?.paymentMethodText || "",
+    fundingSourceId: String(item?.funding_source || funding.id || account?.fundingSourceId || ""),
+    businessName: String(item?.business?.name || account?.businessName || "").slice(0, 160),
+    isPrepayAccount: item?.is_prepay_account === true,
+  };
+}
+
+async function enrichMetaAccountsWithBillingInfo(accounts, accessToken, graphVersion) {
+  const list = Array.isArray(accounts) ? accounts : [];
+  const output = new Array(list.length);
+  let cursor = 0;
+  const workers = Math.min(4, Math.max(1, list.length));
+  async function worker() {
+    while (true) {
+      const index = cursor++;
+      if (index >= list.length) return;
+      let account = list[index];
+      try { account = await fetchMetaAdAccountDetails(account, accessToken, graphVersion); } catch {}
+      try {
+        const activities = await fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, Date.now() - 90 * 24 * 60 * 60 * 1000);
+        const profile = deriveMetaBillingProfile(account, activities);
+        account = { ...account, ...profile };
+      } catch {}
+      output[index] = account;
+    }
+  }
+  await Promise.all(Array.from({ length: workers }, () => worker()));
+  return output.filter(Boolean);
+}
+
 async function fetchMetaAdAccounts(accessToken, graphVersion) {
   const version = normalizeMetaGraphVersion(graphVersion);
   const richFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,funding_source,funding_source_details,business{id,name}";
@@ -1414,6 +1538,7 @@ async function runMetaApiSync(workspace, state, reason = "manual", deviceName = 
   const startedAt = Date.now();
   try {
     const fetched = await fetchMetaAdAccounts(accessToken, graphVersion);
+    fetched.accounts = await enrichMetaAccountsWithBillingInfo(fetched.accounts, accessToken, graphVersion);
     if (!fetched.accounts.length) {
       const error = new Error("Meta API không trả về tài khoản quảng cáo nào. Kiểm tra quyền ads_read/ads_management của token.");
       error.status = 400;
@@ -2729,14 +2854,33 @@ function mergeMetaAccountsIntoPayload(payload, accounts, nowIso = new Date().toI
     ad.metaCurrency = scanned.currency;
     ad.metaApiStatus = scanned.status;
     ad.metaApiLimit = scanned.limit;
+    if (!ad.manualThresholdOverride && scanned.threshold > 0) ad.threshold = scanned.threshold;
+    if (scanned.thresholdSource) ad.metaThresholdSource = scanned.thresholdSource;
+    if (scanned.thresholdConfidence) ad.metaThresholdConfidence = scanned.thresholdConfidence;
     if (scanned.cardLast4) ad.paymentCardLast4 = scanned.cardLast4;
+    if (scanned.cardBrand) ad.paymentCardBrand = scanned.cardBrand;
     if (scanned.paymentMethodText) ad.metaPaymentMethodText = scanned.paymentMethodText;
-    ad.remainingThreshold = Math.max(0, cleanPositiveNumber(ad.threshold) - scanned.balance);
+    if (scanned.nextBillingDate) ad.billingNextDate = scanned.nextBillingDate;
+    if (scanned.nextBillingDateText) ad.billingNextDateText = scanned.nextBillingDateText;
+    if (scanned.billingMode) ad.metaBillingMode = scanned.billingMode;
+    const thresholdValue = cleanPositiveNumber(ad.threshold || scanned.threshold);
+    ad.remainingThreshold = scanned.remainingThreshold > 0
+      ? scanned.remainingThreshold
+      : Math.max(0, thresholdValue - scanned.balance);
     ad.metaApi = {
       balance: scanned.balance,
       amountSpent: scanned.amountSpent,
+      threshold: thresholdValue,
+      remainingThreshold: ad.remainingThreshold,
+      thresholdSource: scanned.thresholdSource || ad.metaThresholdSource || "",
+      thresholdConfidence: scanned.thresholdConfidence || ad.metaThresholdConfidence || "",
       cardLast4: scanned.cardLast4 || ad.paymentCardLast4 || "",
+      cardBrand: scanned.cardBrand || ad.paymentCardBrand || "",
       paymentMethodText: scanned.paymentMethodText || ad.metaPaymentMethodText || "",
+      nextBillingDate: scanned.nextBillingDate || ad.billingNextDate || "",
+      nextBillingDateText: scanned.nextBillingDateText || ad.billingNextDateText || "",
+      billingMode: scanned.billingMode || ad.metaBillingMode || "",
+      isPrepayAccount: scanned.isPrepayAccount === true,
       ownerId: scanned.ownerId,
       limit: scanned.limit,
       currency: scanned.currency,
@@ -4112,6 +4256,7 @@ if (process.env.NODE_ENV === "test") {
     applyManualAdAccountEdit,
     getValidFundingSource,
     mergeMetaAccountsIntoPayload,
+    deriveMetaBillingProfile,
     tryParseEmbeddedMetaValue,
     findMetaBillingRelatedAmount,
     applyMetaBillingSnapshotRecovery,
