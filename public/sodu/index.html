@@ -1207,6 +1207,33 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
         </div>
       </div>
 
+
+      <div class="card section-card" style="margin-top:16px" id="adsCheckPairingCard">
+        <div class="toolbar">
+          <div>
+            <h2 style="margin:0">Ghép Extension AdsCheck V6</h2>
+            <div class="footer-note">Tạo mã ghép 8 số trên web, sau đó nhập mã này trong Extension AdsCheck V6 để extension gửi dữ liệu realtime về đúng workspace.</div>
+          </div>
+          <div class="right">
+            <button class="primary" id="btnCreatePairingCode" type="button">Tạo mã ghép</button>
+            <button class="ghost" id="btnCopyPairingCode" type="button" disabled>Sao chép mã</button>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:14px">
+          <div class="setting-box">
+            <div class="field"><label>Mã ghép Extension</label>
+              <div id="outlookPairingCodeDisplay" class="notice" style="min-height:78px;display:grid;place-items:center;text-align:center">Chưa tạo mã ghép.</div>
+            </div>
+            <div id="outlookDeviceStatus" class="upload-status" style="margin-top:10px">Đang kiểm tra quyền thiết bị…</div>
+          </div>
+          <div class="setting-box">
+            <div class="section-title">Cách ghép</div>
+            <div class="helper-note">1. Bấm <b>Tạo mã ghép</b> trên web.<br>2. Mở Extension AdsCheck V6.<br>3. Nhập URL Vercel của T Balance.<br>4. Nhập mã 8 số và bấm <b>Ghép</b>.<br>5. Mã chỉ dùng một lần và hết hạn sau 10 phút.</div>
+            <div class="notice" style="margin-top:10px"><b>Lưu ý:</b> Extension chỉ cập nhật số dư/ngưỡng/thẻ/ngày thu realtime. Bill thanh toán và tự trừ vẫn dùng Meta API.</div>
+          </div>
+        </div>
+      </div>
+
       <div class="card section-card" style="margin-top:16px">
         <div class="toolbar">
           <div>
@@ -1609,6 +1636,7 @@ function escapeHtml(str) {
 }
 let syncLogs = [];
 let pairedDevicesCache = [];
+let currentPairingCode = "";
 
 function renderSyncLog() {
   const wrap = el("syncLog");
@@ -2759,11 +2787,25 @@ async function createDevicePairingCode() {
     setDeviceStatus("Đang tạo mã ghép…");
     const result = await callMetaBridge("createPairingCode");
     const expires = new Date(Number(result.expiresAtMs || Date.now() + 600000)).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    currentPairingCode = String(result.pairingCode || "");
     const display = el("outlookPairingCodeDisplay");
-    if (display) display.innerHTML = `<b style="font-size:24px;letter-spacing:.18em">${escapeHtml(result.pairingCode)}</b><br><span>Hết hạn lúc ${escapeHtml(expires)}</span>`;
-    setDeviceStatus("Mã ghép đã được tạo. Nhập mã này trên thiết bị thứ hai.", "ok");
+    if (display) display.innerHTML = `<div><b style="font-size:30px;letter-spacing:.20em">${escapeHtml(currentPairingCode)}</b><br><span>Hết hạn lúc ${escapeHtml(expires)} · dùng một lần</span></div>`;
+    const copyBtn = el("btnCopyPairingCode");
+    if (copyBtn) copyBtn.disabled = !currentPairingCode;
+    setDeviceStatus("Mã ghép AdsCheck V6 đã sẵn sàng. Nhập mã này trong extension.", "ok");
   } catch (error) {
     setDeviceStatus(isDeviceAuthError(error) ? "Chỉ thiết bị đã đăng nhập mới tạo được mã ghép." : (error.message || "Không tạo được mã ghép."), "error");
+  }
+}
+
+async function copyPairingCodeToClipboard() {
+  if (!currentPairingCode) return alert("Hãy tạo mã ghép trước.");
+  try {
+    await navigator.clipboard.writeText(currentPairingCode);
+    showStatus("Đã sao chép mã ghép AdsCheck V6.");
+    setDeviceStatus("Đã sao chép mã. Dán vào Extension AdsCheck V6.", "ok");
+  } catch {
+    alert(`Mã ghép: ${currentPairingCode}`);
   }
 }
 
@@ -3818,6 +3860,8 @@ el("btnAnalyzeBill").addEventListener("click", analyzeBill);
 
 
 
+el("btnCreatePairingCode")?.addEventListener("click", createDevicePairingCode);
+el("btnCopyPairingCode")?.addEventListener("click", copyPairingCodeToClipboard);
 el("btnRefreshPairedDevices")?.addEventListener("click", () => refreshPairedDevices({ silent: false }));
 el("btnRemoveOtherDevices")?.addEventListener("click", removeAllOtherDevices);
 
