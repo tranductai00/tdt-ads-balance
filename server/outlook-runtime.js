@@ -522,9 +522,15 @@ function mergeConcurrentWorkspacePayload(serverValue, clientValue) {
     for (const field of ADSCHECK_SERVER_FIELDS) {
       if (serverAd[field] !== undefined) merged[field] = serverAd[field];
     }
-    if (serverAd.threshold !== undefined) merged.threshold = serverAd.threshold;
-    if (!clientAd.bankId && serverAd.bankId) merged.bankId = serverAd.bankId;
-    if ((!clientAd.name || ["adscheck_smit", "meta_api"].includes(clientAd.createdFrom)) && serverAd.name) merged.name = serverAd.name;
+    // v6.1.9: trường người dùng sửa thủ công phải thắng dữ liệu scan tự động.
+    if (!clientAd.manualThresholdOverride && serverAd.threshold !== undefined) merged.threshold = serverAd.threshold;
+    if (!clientAd.manualBankOverride && !clientAd.bankId && serverAd.bankId) merged.bankId = serverAd.bankId;
+    if (!clientAd.manualNameOverride && (!clientAd.name || ["adscheck_smit", "meta_api", "billing_extension"].includes(clientAd.createdFrom)) && serverAd.name) merged.name = serverAd.name;
+    if (clientAd.manualEditedAt) merged.manualEditedAt = clientAd.manualEditedAt;
+    if (clientAd.manualNameOverride !== undefined) merged.manualNameOverride = clientAd.manualNameOverride;
+    if (clientAd.manualBankOverride !== undefined) merged.manualBankOverride = clientAd.manualBankOverride;
+    if (clientAd.manualThresholdOverride !== undefined) merged.manualThresholdOverride = clientAd.manualThresholdOverride;
+    if (clientAd.manualAccountIdOverride !== undefined) merged.manualAccountIdOverride = clientAd.manualAccountIdOverride;
     return merged;
   });
 
@@ -2404,7 +2410,7 @@ async function syncBillingExtensionData(workspace, body, deviceName) {
       }
       if (!ad) continue;
 
-      if (settings.autoLinkBank && !ad.bankId && scanned.cardLast4) {
+      if (settings.autoLinkBank && !ad.manualBankOverride && !ad.bankId && scanned.cardLast4) {
         const candidates = suffixes.get(scanned.cardLast4) || [];
         if (candidates.length === 1) {
           ad.bankId = candidates[0].id;
@@ -2413,12 +2419,12 @@ async function syncBillingExtensionData(workspace, body, deviceName) {
       }
 
       // Billing Hub là nguồn ưu tiên cho payment threshold/ngày thu/thẻ.
-      if (scanned.threshold > 0) ad.threshold = scanned.threshold;
+      if (!ad.manualThresholdOverride && scanned.threshold > 0) ad.threshold = scanned.threshold;
       if (scanned.cardLast4) ad.paymentCardLast4 = scanned.cardLast4;
       if (scanned.cardBrand) ad.paymentCardBrand = scanned.cardBrand;
       if (scanned.nextBillingDate) ad.billingNextDate = scanned.nextBillingDate;
       if (scanned.nextBillingDateText) ad.billingNextDateText = scanned.nextBillingDateText;
-      if (scanned.name && (!ad.name || ad.createdFrom === "billing_extension")) ad.name = scanned.name;
+      if (!ad.manualNameOverride && scanned.name && (!ad.name || ad.createdFrom === "billing_extension")) ad.name = scanned.name;
       ad.billingPageBalance = scanned.balance;
       ad.billingSourceUrl = scanned.sourceUrl || String(body.sourceUrl || "").slice(0, 500);
       ad.billingLastSyncAt = nowIso;
@@ -2695,15 +2701,15 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
       }
       if (!ad) continue;
 
-      if (settings.autoLinkBank && !ad.bankId && scanned.cardLast4) {
+      if (settings.autoLinkBank && !ad.manualBankOverride && !ad.bankId && scanned.cardLast4) {
         const candidates = suffixes.get(scanned.cardLast4) || [];
         if (candidates.length === 1) {
           ad.bankId = candidates[0].id;
           linked += 1;
         }
       }
-      if (settings.updateThreshold && scanned.threshold > 0) ad.threshold = scanned.threshold;
-      if (scanned.name && (!ad.name || ["adscheck_smit", "meta_api"].includes(ad.createdFrom))) ad.name = scanned.name;
+      if (settings.updateThreshold && !ad.manualThresholdOverride && scanned.threshold > 0) ad.threshold = scanned.threshold;
+      if (!ad.manualNameOverride && scanned.name && (!ad.name || ["adscheck_smit", "meta_api"].includes(ad.createdFrom))) ad.name = scanned.name;
       ad.adsCheckBalance = scanned.balance; // field legacy để dashboard v5.6 tiếp tục hoạt động
       ad.adsCheckSelected = true;
       ad.remainingThreshold = isMetaApi
@@ -4361,6 +4367,7 @@ if (process.env.NODE_ENV === "test") {
     resolveMetaBillingSinceMs,
     normalizeMetaBillingConfig,
     shouldRetryMetaBillingEvent,
+    mergeConcurrentWorkspacePayload,
     tryParseEmbeddedMetaValue,
     findMetaBillingRelatedAmount,
     applyMetaBillingSnapshotRecovery,

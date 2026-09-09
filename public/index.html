@@ -1394,14 +1394,14 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
     <div class="row">
       <div class="field"><label>Tên tài khoản QC</label><input id="editAdName" /></div>
       <div class="field"><label>Mã tài khoản</label><input id="editAdCode" /></div>
-      <div class="field"><label>Ngân hàng liên kết</label><select id="editAdBankId"></select></div>
+      <div class="field"><label>Ngân hàng liên kết <span class="muted">(không bắt buộc)</span></label><select id="editAdBankId"></select></div>
     </div>
     <div class="row" style="margin-top:14px"><div class="field"><label>Ngưỡng sẽ bị thu tiền</label><input id="editAdThreshold" inputmode="numeric" /></div></div>
     <div class="row" style="margin-top:14px">
       <button id="btnSaveAdEdit">Lưu thay đổi</button>
       <button class="danger" id="btnDeleteAdEdit" type="button">Xóa tài khoản này</button>
     </div>
-    <div class="helper-note" style="margin-top:8px">Tài khoản đã xóa sẽ không tự được nhập lại từ AdsCheck V6. Giao dịch lịch sử và số dư ngân hàng vẫn được giữ nguyên.</div>
+    <div class="helper-note" style="margin-top:8px">Có thể để trống ngân hàng. Ngưỡng nhập thủ công sẽ được ưu tiên và không bị AdsCheck/Billing ghi đè; để trống hoặc 0 để quay lại ngưỡng tự động.</div>
   </div>
 </div>
 
@@ -4131,20 +4131,61 @@ function saveBankEdit() {
   closeBankModal();
   persist();
 }
-function saveAdEdit() {
+async function saveAdEdit() {
   const ad = data.adAccounts.find(a => a.id === editingAdId);
   if (!ad) return;
+  const button = el("btnSaveAdEdit");
   const name = el("editAdName").value.trim();
-  const bankId = el("editAdBankId").value;
+  const bankId = el("editAdBankId").value || "";
   const accountId = el("editAdCode").value.trim();
+  const threshold = positiveInt(el("editAdThreshold").value);
   if (!name) return alert("Nhập tên tài khoản QC.");
-  if (!bankId) return alert("Chọn ngân hàng liên kết.");
   const normalized = normalizeAdAccountId(accountId);
   const duplicate = normalized && data.adAccounts.find((item) => item.id !== ad.id && normalizeAdAccountId(item.accountId) === normalized);
   if (duplicate) return alert("Mã tài khoản quảng cáo này đã tồn tại.");
-  unignoreAdAccount(accountId);
-  ad.name = name; ad.accountId = accountId; ad.bankId = bankId; ad.threshold = positiveInt(el("editAdThreshold").value);
-  closeAdModal(); persist();
+
+  const oldAccountId = normalizeAdAccountId(ad.accountId);
+  const nowIso = new Date().toISOString();
+  if (normalized) unignoreAdAccount(accountId);
+  if (oldAccountId && normalized && oldAccountId !== normalized) {
+    const list = Array.isArray(data.settings?.deletedAdAccountIds) ? data.settings.deletedAdAccountIds : [];
+    if (!list.includes(oldAccountId)) list.push(oldAccountId);
+    data.settings.deletedAdAccountIds = list.slice(-1000);
+  }
+
+  ad.name = name;
+  ad.accountId = accountId;
+  ad.bankId = bankId;
+  ad.threshold = threshold;
+  ad.manualEditedAt = nowIso;
+  ad.manualNameOverride = true;
+  ad.manualBankOverride = !!bankId;
+  ad.manualThresholdOverride = threshold > 0;
+  ad.manualAccountIdOverride = true;
+
+  saveLocal();
+  render();
+  if (button) { button.disabled = true; button.textContent = "Đang lưu..."; }
+  try {
+    if (cloudReady) {
+      clearTimeout(autoSaveTimer);
+      const result = await callOutlookBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
+      cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
+      if (result.conflictMerged) await pullCloud({ silent: true });
+      showStatus("Đã lưu thay đổi tài khoản quảng cáo.");
+    } else {
+      scheduleCloudSave();
+      showStatus("Đã lưu trên thiết bị. Kết nối cloud để đồng bộ.");
+    }
+    closeAdModal();
+  } catch (error) {
+    console.error("saveAdEdit", error);
+    showStatus(error?.message || "Không lưu được tài khoản quảng cáo.", true);
+    alert(error?.message || "Không lưu được tài khoản quảng cáo.");
+  } finally {
+    const currentButton = el("btnSaveAdEdit");
+    if (currentButton) { currentButton.disabled = false; currentButton.textContent = "Lưu thay đổi"; }
+  }
 }
 
 function deleteAdAccount(id) {

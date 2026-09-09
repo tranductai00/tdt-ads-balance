@@ -189,3 +189,50 @@ assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lo
 assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), cursor - 20*60*1000);
 
 console.log("PASS Meta Billing v6.1.8 FBT-compatible parser + backfill");
+
+// v6.1.9: manual ad-account edits must survive a newer AdsCheck/Billing scan.
+const mergedManualAd = hooks.mergeConcurrentWorkspacePayload(
+  {
+    payload: {
+      banks: [{ id: "bank-old", name: "Old bank" }],
+      adAccounts: [{
+        id: "smit_abc",
+        name: "Tên từ scan",
+        accountId: "1455001556459898",
+        bankId: "bank-old",
+        threshold: 52611,
+        lastAdsCheckSyncAt: "2026-09-09T06:00:00.000Z",
+        adsCheckBalance: 12904,
+      }],
+      transactions: [], settings: {},
+    },
+  },
+  {
+    banks: [{ id: "bank-new", name: "VPBANK - LA" }],
+    adAccounts: [{
+      id: "smit_abc",
+      name: "TAI-BOOM ĐÃ SỬA",
+      accountId: "1455001556459898",
+      bankId: "bank-new",
+      threshold: 60000,
+      lastAdsCheckSyncAt: "2026-09-09T05:00:00.000Z",
+      manualEditedAt: "2026-09-09T06:10:00.000Z",
+      manualNameOverride: true,
+      manualBankOverride: true,
+      manualThresholdOverride: true,
+    }],
+    transactions: [], settings: {},
+  },
+);
+assert.equal(mergedManualAd.adAccounts[0].name, "TAI-BOOM ĐÃ SỬA");
+assert.equal(mergedManualAd.adAccounts[0].bankId, "bank-new");
+assert.equal(mergedManualAd.adAccounts[0].threshold, 60000);
+assert.equal(mergedManualAd.adAccounts[0].adsCheckBalance, 12904, "scan fields should still refresh");
+
+const mergedAutoThreshold = hooks.mergeConcurrentWorkspacePayload(
+  { payload: { banks: [], adAccounts: [{ id: "smit_xyz", accountId: "1067089695688330", threshold: 52611, lastAdsCheckSyncAt: "2026-09-09T06:00:00.000Z" }], transactions: [], settings: {} } },
+  { banks: [], adAccounts: [{ id: "smit_xyz", accountId: "1067089695688330", threshold: 40000, lastAdsCheckSyncAt: "2026-09-09T05:00:00.000Z", manualThresholdOverride: false }], transactions: [], settings: {} },
+);
+assert.equal(mergedAutoThreshold.adAccounts[0].threshold, 52611, "automatic threshold should still follow newer scan when no manual override");
+
+console.log("PASS v6.1.9 ad-account manual edit merge protection");

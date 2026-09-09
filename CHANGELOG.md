@@ -1,3 +1,12 @@
+# v6.1.9 - Fix sửa tài khoản quảng cáo
+
+- Fix nút **Sửa**/Lưu tài khoản quảng cáo hoạt động ổn định với tài khoản chưa gắn ngân hàng.
+- Ngân hàng liên kết trong modal Sửa không còn bắt buộc.
+- Thêm manual override cho tên, ngân hàng và ngưỡng để AdsCheck/Billing sync không ghi đè giá trị người dùng vừa sửa.
+- Để trống/0 ngưỡng sẽ bỏ manual threshold override và cho phép đồng bộ tự động cập nhật lại ngưỡng.
+- Khi đổi Account ID, ID cũ được thêm vào danh sách bỏ qua để auto-import không tạo lại tài khoản cũ.
+- Lưu sửa dùng workspaceSet ngay lập tức và xử lý conflict merge trước khi đóng modal.
+
 # v6.1.8 — Facebook Billing Tool-compatible amount fix
 
 - Map chính xác `ad_account_billing_charge + type=payment_amount + action=67 + new_value` thành số tiền bill.

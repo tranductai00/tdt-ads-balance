@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-billing-api",
-  "version": "6.1.8",
+  "version": "6.1.9",
   "private": true,
-  "description": "T Balance v6.1.8 - Facebook Billing Tool-compatible Meta billing parser, payment_amount/action 67/new_value mapping and full manual backfill repair",
+  "description": "T Balance v6.1.9 - Fix editing ad accounts: optional bank link, durable manual overrides, conflict-safe cloud save",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
