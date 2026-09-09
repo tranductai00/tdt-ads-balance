@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const webpush = require("web-push");
 const { getStore, FieldValue } = require("./store");
+const googleSheets = require("./google-sheets");
 // Portable Vercel runtime: same HTTP/job API as the previous build,
 // but persistence is PostgreSQL and browser notifications use standard Web Push.
 const onRequest = (_options, handler) => handler;
@@ -2583,6 +2584,14 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       }, { merge: true });
     }
 
+    let googleSheetSync = { enabled: false, written: 0, errors: [] };
+    try {
+      googleSheetSync = await googleSheets.autoSyncEventGroups(workspace, allEvents);
+    } catch (sheetError) {
+      console.warn("Google Sheet auto sync lỗi:", sheetError?.message || sheetError);
+      googleSheetSync = { enabled: true, written: 0, errors: [{ error: sheetError?.message || String(sheetError) }] };
+    }
+
     const patch = {
       metaBillingEnabled: config.enabled,
       metaBillingAutoSync: config.autoSync,
@@ -2619,7 +2628,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       updatedAt: FieldValue.serverTimestamp(),
     };
     await db.collection(META_STATES).doc(workspace).set(patch, { merge: true });
-    return { scannedAccounts: accounts.length, totalAccounts, discoveredAccounts: discoveredAccounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, availableAccounts, nextScanCursor, eventsFound: allEvents.length, newBills, autoDeducted, pending, parseErrors, duplicates, recognized, accountErrors: errors.slice(0, 20), lastEventTimeMs };
+    return { scannedAccounts: accounts.length, totalAccounts, discoveredAccounts: discoveredAccounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, availableAccounts, nextScanCursor, eventsFound: allEvents.length, newBills, autoDeducted, pending, parseErrors, duplicates, recognized, accountErrors: errors.slice(0, 20), lastEventTimeMs, googleSheetSync };
   } catch (error) {
     const patch = {
       metaBillingLastAttemptAtMs: Date.now(),
@@ -3559,7 +3568,9 @@ exports.metaBridge = onRequest({
       "deviceStatus", "listDevices", "removeDevice", "removeOtherDevices", "createPairingCode", "joinDevice",
       "adAccountManualUpdate", "adAccountSetFundingSource", "workspaceGet", "workspaceSet",
       "metaApiStatus", "metaApiConfigure", "metaApiSync",
-      "metaBillingStatus", "metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "metaBillingSync"
+      "metaBillingStatus", "metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "metaBillingSync",
+      "googleSheetsStatus", "googleSheetsCredentialsConfigure", "googleSheetsAuthUrl", "googleSheetsDisconnect",
+      "googleSheetsSaveSettings", "googleSheetsTest", "googleSheetsStartNow", "googleSheetsFillAll"
     ]);
     if (!metaOnlyActions.has(action)) {
       const error = new Error("Tính năng này đã được loại bỏ. Phiên bản Meta-only chỉ sử dụng Meta Graph API.");
@@ -3875,6 +3886,48 @@ exports.metaBridge = onRequest({
         updatedAtMs: timestampToMs(next.data()?.updatedAt) || Date.now(),
         balanceNotification,
       });
+    }
+
+    if (action === "googleSheetsStatus") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.status(workspace)) });
+    }
+
+    if (action === "googleSheetsCredentialsConfigure") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const result = await googleSheets.saveCredentials(workspace, body);
+      return sendJson(res, 200, { ok: true, ...result });
+    }
+
+    if (action === "googleSheetsAuthUrl") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      const result = await googleSheets.createAuthUrl(workspace, body.returnUrl || "/?section=google");
+      return sendJson(res, 200, { ok: true, ...result });
+    }
+
+    if (action === "googleSheetsDisconnect") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.disconnect(workspace)) });
+    }
+
+    if (action === "googleSheetsSaveSettings") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.saveSheetSettings(workspace, body)) });
+    }
+
+    if (action === "googleSheetsTest") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.testSheet(workspace)) });
+    }
+
+    if (action === "googleSheetsStartNow") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.startNow(workspace, body.enabled !== false, { onlyVnd: body.onlyVnd !== false })) });
+    }
+
+    if (action === "googleSheetsFillAll") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.fillAll(workspace, body)) });
     }
 
     if (action === "metaApiStatus") {

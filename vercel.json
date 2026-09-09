@@ -7,6 +7,10 @@
       "destination": "/api/metaBridge"
     },
     {
+      "source": "/auth/google/callback",
+      "destination": "/api/googleOAuthCallback"
+    },
+    {
       "source": "/",
       "destination": "/index.html"
     },
@@ -22,6 +26,9 @@
   "functions": {
     "api/metaBridge.js": {
       "maxDuration": 300
+    },
+    "api/googleOAuthCallback.js": {
+      "maxDuration": 60
     }
   }
 }

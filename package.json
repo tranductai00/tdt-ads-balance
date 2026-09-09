@@ -1,18 +1,18 @@
 {
-  "name": "t-balance-vercel-meta-only",
-  "version": "7.0.5",
+  "name": "t-balance-vercel-meta-google-sheets",
+  "version": "7.1.0",
   "private": true,
-  "description": "T Balance v7.0.5 Meta-only - direct atomic funding-source attach/detach for ad accounts and reliable manual edit",
+  "description": "T Balance v7.1.0 Meta-only + Google Sheets OAuth auto report: Account ID x billing date, baseline anti-duplicate, manual reconciliation",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
-    "check": "node --check server.js && node --check server/store.js && node --check server/meta-runtime.js && node --check api/metaBridge.js && node --check api/healthz.js && node --check public/push-sw.js",
+    "check": "node --check server.js && node --check server/store.js && node --check server/meta-runtime.js && node --check server/google-sheets.js && node --check api/metaBridge.js && node --check api/healthz.js && node --check api/googleOAuthCallback.js && node --check public/push-sw.js",
     "token-key": "node scripts/generate-token-key.js",
     "vapid:generate": "node scripts/generate-vapid-keys.js",
-    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_manual_ad_edit.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_bridge_scope.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_full_billing_info.js"
+    "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_manual_ad_edit.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_bridge_scope.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_full_billing_info.js && NODE_PATH=tests/stubs NODE_ENV=test node tests/test_google_sheets.js"
   },
   "dependencies": {
     "express": "^5.1.0",

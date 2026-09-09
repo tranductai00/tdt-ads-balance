@@ -1,31 +1,29 @@
-# Deploy T Balance v7.0 Meta-only lên Vercel
+# Deploy T Balance v7.1 lên Vercel
 
-## 1. Tạo PostgreSQL/Neon
+## 1. PostgreSQL / Neon
 
-Tạo database và đặt connection string vào biến `DATABASE_URL` trong Vercel.
+Tạo database và đặt connection string vào `DATABASE_URL`.
 
 ## 2. Environment Variables
-
-Tối thiểu:
 
 ```text
 DATABASE_URL=postgresql://...
 APP_ENCRYPTION_KEY=<base64 32-byte>
+WEB_APP_BASE_URL=https://your-domain.vercel.app
 CRON_SECRET=<chuỗi bí mật dài>
-WEB_APP_BASE_URL=https://your-project.vercel.app
 ```
 
-Tạo APP_ENCRYPTION_KEY:
+Tạo khóa:
 
 ```bash
 npm run token-key
 ```
 
-Không cần `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `OUTLOOK_PUBLIC_BASE_URL`, Firebase credential hoặc AdsCheck.
+`WEB_APP_BASE_URL` phải là domain thực bạn dùng vì Google OAuth Redirect URI được tạo từ biến này.
 
-## 3. Deploy
+## 3. Deploy source
 
-Import repo/source vào Vercel. Root Directory phải là thư mục có:
+Root Directory là thư mục có:
 
 ```text
 server.js
@@ -38,39 +36,63 @@ server/
 
 Không đặt Output Directory thành `public`.
 
-## 4. Kiểm tra
+## 4. Tạo Google OAuth Web Client
+
+Trong Google Cloud Console:
+
+1. Tạo/Chọn project.
+2. Bật **Google Sheets API**.
+3. Cấu hình OAuth consent screen.
+4. Tạo OAuth Client loại **Web application**.
+5. Authorized redirect URI:
 
 ```text
-https://your-domain/api/healthz
+https://YOUR-DOMAIN/auth/google/callback
 ```
 
-Phải có:
+URI chính xác cũng được hiển thị trong tab **Google Sheet** của T Balance.
 
-```json
-{
-  "ok": true,
-  "integrations": {
-    "metaGraphApi": true,
-    "outlook": false,
-    "adscheck": false
-  }
-}
+Nếu OAuth app đang ở Testing, thêm tài khoản Google bạn sẽ đăng nhập vào danh sách Test users.
+
+## 5. Cấu hình trên giao diện T Balance
+
+Vào **Google Sheet**:
+
+1. Nhập Google Client ID.
+2. Nhập Google Client Secret.
+3. Bấm **Lưu OAuth**.
+4. Bấm **Kết nối Google** và đăng nhập tài khoản có quyền sửa Sheet.
+5. Dán link Google Sheet.
+6. Nhập tên sheet và mapping cột.
+7. Bấm **Lưu cấu hình Sheet**.
+8. Bấm **Kiểm tra Sheet**.
+9. Bấm **Bắt đầu tự động từ bây giờ**.
+
+## 6. Cấu trúc báo cáo mặc định
+
+```text
+Tên sheet: Chi tiết dòng tiền
+Dòng tiêu đề ngày: 2
+Cột Account ID: C
+Cột ngày bắt đầu: G
+Cột ngày kết thúc: AK
+Dòng tối đa: 5000
 ```
 
-## 5. Cấu hình Meta API trên web
+Hàng tiêu đề ngày có thể là `9/9`, `09/09`, `09-09`...; backend chuẩn hóa về `DD/MM`.
 
-Vào `Meta API` → nhập Access Token → `Lưu API` hoặc `Kiểm tra kết nối`.
+Cột Account ID nên đặt định dạng **Plain text** để ID dài không bị Google Sheets làm tròn.
 
-Ngay khi backend lấy được `/me/adaccounts`, TKQC chưa có sẽ tự động được thêm vào data.
+## 7. Chạy tự động 24/7
 
-## 6. Chạy tự động khi đóng trình duyệt
-
-Có sẵn GitHub Actions `.github/workflows/meta-billing-cron.yml` gọi cả:
+Workflow `.github/workflows/meta-billing-cron.yml` đã có sẵn. Nó gọi:
 
 - `/cron/meta-accounts`
 - `/cron/meta-billing`
 
-Cấu hình GitHub repository secrets:
+Google Sheet auto-fill chạy bên trong Meta Billing sync nên không cần cron riêng.
+
+GitHub repository secrets:
 
 ```text
 TBALANCE_BASE_URL=https://your-domain.vercel.app

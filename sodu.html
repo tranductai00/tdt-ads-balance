@@ -811,7 +811,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
     <div class="brand">
       <div class="logo">T</div>
       <div>
-        <div class="brand-title">T Balance</div><div class="brand-version">v7.0 Meta API Only</div>
+        <div class="brand-title">T Balance</div><div class="brand-version">v7.1 Meta + Google Sheets</div>
         
       </div>
     </div>
@@ -821,6 +821,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
       <button class="nav-btn" data-section="ads"><svg viewBox="0 0 24 24"><path d="M4 12h3l10-5v10L7 12H4Z"/><path d="M7 12v6"/><path d="M18 9.5a4 4 0 0 1 0 5"/></svg><span>Tài khoản QC</span></button>
       <button class="nav-btn" data-section="transactions"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/><path d="M7 15h4"/></svg><span>Thanh toán</span></button>
       <button class="nav-btn" data-section="meta"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/><path d="M8 11h6M11 8v6"/></svg><span>Meta API</span></button>
+      <button class="nav-btn" data-section="google"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v16M13 9v11M18 9v11"/></svg><span>Google Sheet</span></button>
       <button class="nav-btn" data-section="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.1a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 3.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2V9.6h.1a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 8 3.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2h4v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 20.4 8c.1.38.3.72.6 1 .3.28.68.42 1.1.4h.1v4h-.1c-.42-.02-.8.12-1.1.4-.3.28-.5.62-.6 1Z"/></svg><span>Cài đặt</span></button>
       <small>Đồng bộ cloud an toàn · Realtime</small>
     </div>
@@ -1123,6 +1124,56 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
         <div class="divider"></div>
         <div class="toolbar"><div><h2 style="margin:0;font-size:17px">Bill gần đây từ Meta API</h2><div class="footer-note">Nguồn duy nhất: Meta Graph API / Ad Account Activities. Không đối chiếu Outlook và không dùng AdsCheck.</div></div></div>
         <div id="metaBillingRecentList" class="meta-billing-list"><div class="empty">Chưa có billing event.</div></div>
+      </div>
+    </section>
+
+    <section class="section" id="section-google">
+      <div class="grid-2">
+        <div class="card section-card">
+          <div class="toolbar"><div><div class="eyebrow">GOOGLE OAUTH</div><h2 style="margin:8px 0 0">Kết nối Google Sheets</h2><div class="footer-note">Đăng nhập bằng tài khoản Google có quyền chỉnh sửa Sheet. Không dùng Apps Script, Service Account hay Firebase.</div></div><span class="badge warn" id="googleSheetStatusBadge">Chưa kết nối</span></div>
+          <div class="setting-box" style="margin-top:14px">
+            <div class="field"><label>Google OAuth Client ID</label><input id="googleClientId" autocomplete="off" placeholder="xxxx.apps.googleusercontent.com" /></div>
+            <div class="field"><label>Google OAuth Client Secret</label><input id="googleClientSecret" type="password" autocomplete="off" placeholder="Nhập ở lần cấu hình đầu tiên" /></div>
+            <div class="field"><label>Authorized redirect URI</label><input id="googleRedirectUri" readonly /></div>
+            <div class="row"><button id="btnGoogleSaveCredentials" type="button">Lưu OAuth</button><button class="secondary" id="btnGoogleConnect" type="button">Kết nối Google</button><button class="danger" id="btnGoogleDisconnect" type="button">Ngắt Google</button></div>
+            <div class="upload-status" id="googleConnectionStatus">Chưa kết nối Google.</div>
+          </div>
+        </div>
+        <div class="card section-card">
+          <div class="toolbar"><div><div class="eyebrow">AUTOMATION</div><h2 style="margin:8px 0 0">Tự động điền báo cáo</h2><div class="footer-note">Mỗi billing charge Meta sẽ được cộng vào đúng ô Account ID × ngày, chống ghi trùng và giữ số liệu có sẵn bằng baseline.</div></div><span class="badge tag" id="googleAutoBadge">Đang tắt</span></div>
+          <div class="setting-box" style="margin-top:14px">
+            <div class="outlook-status-grid">
+              <div class="outlook-stat"><div class="k">Mốc tự động</div><div class="v" id="googleStartFromText" style="font-size:13px">Chưa đặt</div></div>
+              <div class="outlook-stat"><div class="k">Lần ghi gần nhất</div><div class="v" id="googleLastSyncText" style="font-size:13px">—</div></div>
+              <div class="outlook-stat"><div class="k">Ô đã ghi</div><div class="v" id="googleWrittenCount">0</div></div>
+            </div>
+            <label class="check-row"><input id="googleOnlyVnd" type="checkbox" checked /> Chỉ điền bill VND</label>
+            <div class="row"><button id="btnGoogleStartNow" type="button">Bắt đầu tự động từ bây giờ</button><button class="ghost" id="btnGoogleStopAuto" type="button">Tắt tự động</button></div>
+            <div class="notice"><b>Quy tắc:</b> tự động chỉ cộng bill mới sau mốc bắt đầu. Nút “Điền lại báo cáo” bên dưới có thể ghi lại dữ liệu lịch sử theo khoảng ngày.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card section-card" style="margin-top:16px">
+        <div class="toolbar"><div><h2 style="margin:0">Chọn Google Sheet và cấu trúc báo cáo</h2><div class="footer-note">Cấu trúc tương thích website mẫu: Account ID ở một cột, ngày ở hàng tiêu đề, số tiền được ghi tại giao điểm.</div></div><div class="right"><button class="secondary" id="btnGoogleTestSheet" type="button">Kiểm tra Sheet</button><button id="btnGoogleSaveSheet" type="button">Lưu cấu hình Sheet</button></div></div>
+        <div class="setting-box" style="margin-top:14px">
+          <div class="field"><label>Link Google Sheet</label><input id="googleSpreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit" /></div>
+          <div class="grid-2">
+            <div class="field"><label>Tên sheet</label><input id="googleSheetName" value="Chi tiết dòng tiền" /></div>
+            <div class="field"><label>Dòng tiêu đề ngày</label><input id="googleHeaderRow" type="number" value="2" /></div>
+            <div class="field"><label>Cột Account ID</label><input id="googleAccountIdColumn" value="C" /></div>
+            <div class="field"><label>Dòng tối đa cần dò</label><input id="googleScanMaxRow" type="number" value="5000" /></div>
+            <div class="field"><label>Cột ngày bắt đầu</label><input id="googleDateStartColumn" value="G" /></div>
+            <div class="field"><label>Cột ngày kết thúc</label><input id="googleDateEndColumn" value="AK" /></div>
+          </div>
+          <div class="upload-status" id="googleSheetConfigStatus">Chưa chọn Google Sheet.</div><div class="helper-note" style="margin-top:8px">Nên định dạng cột Account ID là <b>Plain text</b> trong Google Sheet để ID dài không bị Google làm tròn.</div>
+        </div>
+      </div>
+
+      <div class="card section-card" style="margin-top:16px">
+        <div class="toolbar"><div><h2 style="margin:0">Điền lại dữ liệu Meta Billing vào Sheet</h2><div class="footer-note">Ghi lại chính xác tổng billing charge đã đọc từ Meta API cho từng Account ID × ngày trong khoảng đã chọn.</div></div><button class="primary" id="btnGoogleFillAll" type="button">Điền lại báo cáo</button></div>
+        <div class="row" style="margin-top:12px"><div class="field" style="flex:1"><label>Từ ngày</label><input id="googleFillFrom" type="date" /></div><div class="field" style="flex:1"><label>Đến ngày</label><input id="googleFillTo" type="date" /></div></div>
+        <div class="notice" id="googleFillStatus" style="margin-top:10px">Chưa chạy đối chiếu thủ công.</div>
       </div>
     </section>
 
@@ -1550,7 +1601,7 @@ function setSection(name) {
   if (name === "settings") setTimeout(() => refreshPairedDevices({ silent: true }), 0);
 }
 function renderMobileNav() {
-  const items = [["overview","Tổng quan"],["banks","Tài khoản ngân hàng"],["ads","Tài khoản QC"],["transactions","Thanh toán"],["meta","Meta API"],["settings","Cài đặt"]];
+  const items = [["overview","Tổng quan"],["banks","Tài khoản ngân hàng"],["ads","Tài khoản QC"],["transactions","Thanh toán"],["meta","Meta API"],["google","Google Sheet"],["settings","Cài đặt"]];
   el("mobileSectionSelect").innerHTML = items.map(([v,l]) => `<option value="${v}">${l}</option>`).join("");
 }
 function escapeHtml(str) {
@@ -2483,10 +2534,13 @@ async function syncMetaBillingBillsNow(silent = false, reason = "manual") {
     const result = await callMetaBridge("metaBillingSync", { reason });
     if (result?.recentBills) metaBillingStatusCache.recentBills = result.recentBills;
     if (cloudReady) await pullCloud({ silent: true });
-    await refreshMetaBillingStatus(true);
+    await Promise.allSettled([refreshMetaBillingStatus(true), refreshGoogleSheetsStatus(true)]);
     render();
     renderSmartDashboard();
-    if (!silent) addSyncLog(`Meta Billing: ${Number(result.eventsFound || 0)} event · ${Number(result.newBills || 0)} mới · ${Number(result.autoDeducted || 0)} tự trừ.`);
+    if (!silent) {
+      const sheetWritten = Number(result.googleSheetSync?.written || 0);
+      addSyncLog(`Meta Billing: ${Number(result.eventsFound || 0)} event · ${Number(result.newBills || 0)} mới · ${Number(result.autoDeducted || 0)} tự trừ${sheetWritten ? ` · Google Sheet ${sheetWritten} ô` : ""}.`);
+    }
     return result;
   } catch (error) {
     if (!silent) alert(error.message || "Không lấy được bill từ Meta API.");
@@ -3776,6 +3830,124 @@ el("btnRemoveOtherDevices")?.addEventListener("click", removeAllOtherDevices);
 
 
 
+
+let googleSheetsStatusCache = {};
+function googleFmtTime(ms) {
+  const n = Number(ms || 0);
+  return n ? new Date(n).toLocaleString("vi-VN") : "—";
+}
+function renderGoogleSheetsStatus(status = googleSheetsStatusCache) {
+  googleSheetsStatusCache = status || {};
+  const connected = !!status.connected;
+  const badge = el("googleSheetStatusBadge");
+  if (badge) { badge.textContent = connected ? "Đã kết nối" : "Chưa kết nối"; badge.className = `badge ${connected ? "ok" : "warn"}`; }
+  if (el("googleConnectionStatus")) el("googleConnectionStatus").textContent = connected
+    ? `Đã kết nối ${status.email || "Google account"}${status.clientIdHint ? ` · OAuth ${status.clientIdHint}` : ""}`
+    : status.clientConfigured ? "Đã lưu OAuth credentials · bấm Kết nối Google." : "Chưa cấu hình Google OAuth.";
+  if (el("googleRedirectUri")) el("googleRedirectUri").value = status.redirectUri || `${location.origin}/auth/google/callback`;
+  if (el("googleStartFromText")) el("googleStartFromText").textContent = status.startFromMs ? googleFmtTime(status.startFromMs) : "Chưa đặt";
+  if (el("googleLastSyncText")) el("googleLastSyncText").textContent = googleFmtTime(status.lastAutoSyncAtMs || status.lastManualFillAtMs);
+  if (el("googleWrittenCount")) el("googleWrittenCount").textContent = String(Number(status.lastAutoWritten || status.lastManualWritten || 0));
+  if (el("googleAutoBadge")) { el("googleAutoBadge").textContent = status.autoEnabled ? "Đang tự động" : "Đang tắt"; el("googleAutoBadge").className = `badge ${status.autoEnabled ? "ok" : "tag"}`; }
+  if (el("googleOnlyVnd")) el("googleOnlyVnd").checked = status.onlyVnd !== false;
+  if (el("googleSheetName") && status.sheetName) el("googleSheetName").value = status.sheetName;
+  if (el("googleHeaderRow") && status.headerRow) el("googleHeaderRow").value = status.headerRow;
+  if (el("googleAccountIdColumn") && status.accountIdColumn) el("googleAccountIdColumn").value = status.accountIdColumn;
+  if (el("googleDateStartColumn") && status.dateStartColumn) el("googleDateStartColumn").value = status.dateStartColumn;
+  if (el("googleDateEndColumn") && status.dateEndColumn) el("googleDateEndColumn").value = status.dateEndColumn;
+  if (el("googleScanMaxRow") && status.scanMaxRow) el("googleScanMaxRow").value = status.scanMaxRow;
+  if (el("googleSheetConfigStatus")) el("googleSheetConfigStatus").textContent = status.spreadsheetConfigured
+    ? `✓ ${status.spreadsheetTitle || "Google Sheet"} / ${status.sheetName || ""} · ${status.spreadsheetIdHint || ""}`
+    : "Chưa chọn Google Sheet.";
+  if (status.lastError && el("googleFillStatus")) el("googleFillStatus").textContent = `Lỗi gần nhất: ${status.lastError}`;
+}
+async function refreshGoogleSheetsStatus(silent = true) {
+  try {
+    const result = await callMetaBridge("googleSheetsStatus");
+    renderGoogleSheetsStatus(result);
+    return result;
+  } catch (error) {
+    if (!silent) alert(error.message || "Không tải được trạng thái Google Sheet.");
+    return null;
+  }
+}
+async function saveGoogleOAuthCredentials(silent = false) {
+  const clientId = String(el("googleClientId")?.value || "").trim();
+  const clientSecret = String(el("googleClientSecret")?.value || "").trim();
+  try {
+    const result = await callMetaBridge("googleSheetsCredentialsConfigure", { clientId, clientSecret });
+    if (el("googleClientSecret")) el("googleClientSecret").value = "";
+    if (!silent) alert(`Đã lưu Google OAuth.\nRedirect URI: ${result.redirectUri}`);
+    await refreshGoogleSheetsStatus(true);
+    return result;
+  } catch (error) { if (!silent) alert(error.message); throw error; }
+}
+async function connectGoogleSheets() {
+  try {
+    if (String(el("googleClientId")?.value || "").trim() || String(el("googleClientSecret")?.value || "").trim()) await saveGoogleOAuthCredentials(true);
+    const result = await callMetaBridge("googleSheetsAuthUrl", { returnUrl: "/?section=google" });
+    location.href = result.authUrl;
+  } catch (error) { alert(error.message || "Không tạo được link đăng nhập Google."); }
+}
+async function disconnectGoogleSheets() {
+  if (!confirm("Ngắt kết nối Google Sheets? Tự động điền báo cáo sẽ dừng.")) return;
+  try { await callMetaBridge("googleSheetsDisconnect"); await refreshGoogleSheetsStatus(false); } catch (error) { alert(error.message); }
+}
+function googleSheetSettingsFromUi() {
+  return {
+    spreadsheetUrl: String(el("googleSpreadsheetUrl")?.value || "").trim(),
+    sheetName: String(el("googleSheetName")?.value || "Chi tiết dòng tiền").trim(),
+    headerRow: Number(el("googleHeaderRow")?.value || 2),
+    accountIdColumn: String(el("googleAccountIdColumn")?.value || "C").trim(),
+    dateStartColumn: String(el("googleDateStartColumn")?.value || "G").trim(),
+    dateEndColumn: String(el("googleDateEndColumn")?.value || "AK").trim(),
+    scanMaxRow: Number(el("googleScanMaxRow")?.value || 5000),
+    onlyVnd: el("googleOnlyVnd")?.checked !== false,
+    timeZone: "Asia/Ho_Chi_Minh"
+  };
+}
+async function saveGoogleSheetSettings() {
+  try {
+    const result = await callMetaBridge("googleSheetsSaveSettings", googleSheetSettingsFromUi());
+    if (el("googleSheetConfigStatus")) el("googleSheetConfigStatus").textContent = `✓ ${result.spreadsheetTitle} / ${result.sheetName}`;
+    alert("Đã kết nối Google Sheet thành công.");
+    await refreshGoogleSheetsStatus(true);
+  } catch (error) { alert(error.message || "Không lưu được cấu hình Google Sheet."); }
+}
+async function testGoogleSheet() {
+  try { const r = await callMetaBridge("googleSheetsTest"); alert(`Google Sheet hoạt động: ${r.title} → ${r.sheetName}`); }
+  catch (error) { alert(error.message || "Google Sheet không truy cập được."); }
+}
+async function setGoogleAuto(enabled) {
+  if (enabled && !confirm("Bắt đầu tự động điền Google Sheet từ thời điểm này? Chỉ billing charge Meta mới sau mốc sẽ được tự động cộng.")) return;
+  try {
+    const r = await callMetaBridge("googleSheetsStartNow", { enabled, onlyVnd: el("googleOnlyVnd")?.checked !== false });
+    await refreshGoogleSheetsStatus(true);
+    alert(enabled ? `Đã đặt mốc tự động: ${googleFmtTime(r.startFromMs)}` : "Đã tắt tự động điền Google Sheet.");
+  } catch (error) { alert(error.message); }
+}
+async function fillGoogleSheetAll() {
+  if (!confirm("Điền lại Google Sheet theo tổng billing charge Meta đã quét? Các ô Account ID × ngày trong khoảng chọn sẽ được ghi lại.")) return;
+  const status = el("googleFillStatus");
+  try {
+    if (status) status.textContent = "Đang đối chiếu Account ID × ngày và ghi Google Sheet…";
+    const r = await callMetaBridge("googleSheetsFillAll", { from: el("googleFillFrom")?.value || "", to: el("googleFillTo")?.value || "" });
+    if (status) status.textContent = `Đã ghi ${Number(r.written || 0)} ô${r.errors?.length ? ` · ${r.errors.length} lỗi mapping` : ""}.`;
+    if (r.errors?.length) console.warn("Google Sheet mapping errors", r.errors);
+    await refreshGoogleSheetsStatus(true);
+    alert(`Đã điền ${Number(r.written || 0)} ô Google Sheet${r.errors?.length ? ` · ${r.errors.length} ô không map được` : ""}.`);
+  } catch (error) { if (status) status.textContent = `Lỗi: ${error.message}`; alert(error.message); }
+}
+
+el("btnGoogleSaveCredentials")?.addEventListener("click", () => saveGoogleOAuthCredentials(false));
+el("btnGoogleConnect")?.addEventListener("click", connectGoogleSheets);
+el("btnGoogleDisconnect")?.addEventListener("click", disconnectGoogleSheets);
+el("btnGoogleSaveSheet")?.addEventListener("click", saveGoogleSheetSettings);
+el("btnGoogleTestSheet")?.addEventListener("click", testGoogleSheet);
+el("btnGoogleStartNow")?.addEventListener("click", () => setGoogleAuto(true));
+el("btnGoogleStopAuto")?.addEventListener("click", () => setGoogleAuto(false));
+el("btnGoogleFillAll")?.addEventListener("click", fillGoogleSheetAll);
+
 el("btnMetaApiSyncNow")?.addEventListener("click", () => syncMetaApiNow(false));
 
 el("btnMetaBillingSave")?.addEventListener("click", saveMetaBillingConfig);
@@ -3851,8 +4023,13 @@ async function bootApplication() {
   ensureCloudSyncKey();
   await refreshDeviceAuthorization({ silent: true });
   await autoConnectIfConfigured();
-  await Promise.allSettled([refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
-  if (location.pathname.toLowerCase().includes("meta")) setSection("meta");
+  await Promise.allSettled([refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true), refreshGoogleSheetsStatus(true)]);
+  const initialSection = new URLSearchParams(location.search).get("section");
+  if (initialSection === "google") setSection("google");
+  else if (location.pathname.toLowerCase().includes("meta")) setSection("meta");
+  const googleResult = new URLSearchParams(location.search).get("google");
+  if (googleResult === "connected") { addSyncLog("Google Sheets đã kết nối thành công."); setTimeout(() => refreshGoogleSheetsStatus(false), 200); }
+  if (googleResult === "error") { const message = new URLSearchParams(location.search).get("message") || "Google OAuth thất bại."; setTimeout(() => alert(message), 100); }
   setTimeout(() => syncMetaApiNow(true), 1200);
   outlookStatusTimer = setInterval(() => {
     if (document.visibilityState === "visible") refreshAdsCheckStatus(true);
@@ -3865,10 +4042,10 @@ async function bootApplication() {
 window.addEventListener("pagehide", () => persistOutlookConfig(outlookConfig));
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") persistOutlookConfig(outlookConfig);
-  else if (cloudReady) Promise.allSettled([pollCloudChanges(), refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
+  else if (cloudReady) Promise.allSettled([pollCloudChanges(), refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true), refreshGoogleSheetsStatus(true)]);
 });
 window.addEventListener("online", () => {
-  if (cloudReady) Promise.allSettled([pollCloudChanges(), syncMetaApiNow(true), refreshMetaBillingStatus(true, true)]);
+  if (cloudReady) Promise.allSettled([pollCloudChanges(), syncMetaApiNow(true), refreshMetaBillingStatus(true, true), refreshGoogleSheetsStatus(true)]);
 });
 bootApplication().catch((error) => {
   console.error("Khởi tạo ứng dụng:", error);

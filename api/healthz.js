@@ -3,7 +3,7 @@ function canResolve(name) { try { require.resolve(name); return true; } catch { 
 module.exports = async function healthz(_req, res) {
   const payload = {
     ok: true,
-    service: "T Balance v7.0 Meta-only",
+    service: "T Balance v7.1 Meta + Google Sheets",
     route: "api/healthz",
     runtime: "vercel-node",
     node: process.version,
@@ -14,7 +14,7 @@ module.exports = async function healthz(_req, res) {
       webAppBaseUrl: Boolean(process.env.WEB_APP_BASE_URL),
       cronSecret: Boolean(process.env.CRON_SECRET),
     },
-    integrations: { metaGraphApi: true, outlook: false, adscheck: false },
+    integrations: { metaGraphApi: true, googleSheets: true, outlook: false, adscheck: false },
   };
   res.statusCode = 200;
   res.setHeader?.("Content-Type", "application/json; charset=utf-8");

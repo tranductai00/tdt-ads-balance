@@ -1,64 +1,67 @@
-# T Balance v7.0 — Meta API Only
+# T Balance v7.1 — Meta API + Google Sheets
 
-Phiên bản này chỉ dùng **Meta Graph API** làm nguồn dữ liệu tự động cho tài khoản quảng cáo và billing.
+Phiên bản này giữ kiến trúc **Meta-only** của v7.0.5 và bổ sung **Google Sheets OAuth + tự động điền báo cáo** theo cơ chế của source mẫu `meta-outlook-google-sheet-firebase 10.zip`, nhưng không dùng Firebase, Outlook, AdsCheck, Apps Script hay Service Account.
 
-## Đã loại bỏ
+## Nguồn dữ liệu
 
-- Outlook OAuth / Outlook Bridge / Outlook webhook / quét email.
-- AdsCheck / AdsCheck Extension / Billing Extension / browser scraping.
-- Các endpoint Outlook và AdsCheck.
+- Meta Graph API: danh sách TKQC, số dư, billing activities, bill amount.
+- PostgreSQL / Neon: dữ liệu ứng dụng, cấu hình Meta, Google OAuth token, trạng thái chống ghi trùng.
+- Google Sheets API v4: đọc cấu trúc báo cáo và ghi số tiền.
 
-## Giữ lại
+## Google Sheet tự động
 
-- Vercel + PostgreSQL/Neon.
-- Quản lý nguồn tiền, tài khoản quảng cáo, giao dịch.
-- Sửa thủ công TKQC bằng atomic patch.
-- Meta Access Token cài trực tiếp trên web và mã hóa ở backend.
-- Đồng bộ danh sách TKQC trực tiếp từ `/me/adaccounts`.
-- Meta Billing Activities + parser `payment_amount/action=67/new_value`.
-- Chỉ quét billing của các TKQC được chọn nếu muốn.
-- Tự trừ bill charge khi amount đủ tin cậy và khớp đúng TKQC.
+Mỗi billing charge hợp lệ được map theo:
 
-## Auto-import TKQC
+```text
+Meta billing event
+  → Account ID
+  → ngày thanh toán (Asia/Ho_Chi_Minh)
+  → tìm dòng Account ID
+  → tìm cột ngày DD/MM
+  → ghi tổng tiền vào giao điểm
+```
 
-Mỗi lần Meta API trả danh sách tài khoản, backend chạy merge theo `metaAccountId/accountId`:
+Cơ chế baseline tương thích website mẫu:
 
-- Nếu chưa có → tự thêm vào `data.adAccounts`.
-- Nếu đã có → cập nhật balance/status/currency/amount_spent/funding data.
-- Không ghi đè tên, ngân hàng hoặc ngưỡng đã đặt manual override.
-- Nếu người dùng đổi `accountId` hiển thị thủ công, `metaAccountId` vẫn giữ ID gốc từ Meta để tránh import trùng.
+- Không cộng trùng event đã ghi.
+- Không phá số tiền đã tồn tại trong ô trước khi bật automation.
+- Nút **Điền lại báo cáo** ghi lại chính xác tổng bill đã quét theo khoảng ngày.
+- Sau khi reconcile thủ công, bill mới vẫn tiếp tục cộng đúng.
 
-Auto-import chạy khi:
+## Tính năng Google Sheets
 
-- Lưu Meta API lần đầu.
-- Kiểm tra kết nối.
-- Bấm “Tải lại TKQC”.
-- Bấm “Đồng bộ TKQC ngay”.
-- Quét Meta Billing.
-- Cron `/cron/meta-accounts`.
-- Cron `/cron/meta-billing`.
+- Nhập Google OAuth Client ID/Secret trực tiếp trên web.
+- Client Secret và OAuth token được mã hóa AES-256-GCM trong PostgreSQL.
+- Đăng nhập Google bằng tài khoản có quyền chỉnh sửa Sheet.
+- Dán link Spreadsheet và chọn tên sheet.
+- Cấu hình:
+  - dòng tiêu đề ngày;
+  - cột Account ID;
+  - cột ngày bắt đầu / kết thúc;
+  - số dòng tối đa cần dò;
+  - chỉ ghi bill VND.
+- Nút **Bắt đầu tự động từ bây giờ**.
+- Nút **Điền lại báo cáo** theo khoảng ngày.
+- Kiểm tra quyền truy cập Sheet.
+- Tự ghi Sheet ngay sau Meta Billing sync.
+- Cron `/cron/meta-billing` cũng tự ghi Sheet khi browser đóng.
 
 ## Environment Variables
 
 ```text
 DATABASE_URL=postgresql://...
 APP_ENCRYPTION_KEY=<base64 32-byte>
-CRON_SECRET=<random secret>
 WEB_APP_BASE_URL=https://your-domain.vercel.app
+CRON_SECRET=<random secret>
 ```
 
-Tạo khóa mã hóa:
+Google Client ID/Secret không cần đặt trong Vercel Environment Variables; nhập trực tiếp ở tab **Google Sheet**.
 
-```bash
-npm run token-key
-```
-
-Không cần Microsoft/Outlook credentials. Không cần Firebase. Không cần AdsCheck Extension.
-
-## Endpoint
+## API chính
 
 ```text
 POST /api/metaBridge
+GET  /auth/google/callback
 GET  /api/healthz
 GET/POST /cron/meta-accounts
 GET/POST /cron/meta-billing

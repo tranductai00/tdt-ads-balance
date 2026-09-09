@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const express = require("express");
 const { getStore } = require("./server/store");
 const runtime = require("./server/meta-runtime");
+const googleSheets = require("./server/google-sheets");
 const db = getStore();
 
 const app = express();
@@ -60,6 +61,27 @@ function jobRoute(name, ttlMs, task) {
   };
 }
 
+
+app.get("/auth/google/callback", async (req, res) => {
+  try {
+    const code = String(req.query.code || "");
+    const state = String(req.query.state || "");
+    const errorText = String(req.query.error_description || req.query.error || "");
+    if (errorText) throw new Error(errorText);
+    if (!code || !state) throw new Error("Google OAuth callback thiếu code/state.");
+    const result = await googleSheets.exchangeCallback(code, state);
+    const redirect = new URL(result.returnUrl || "/?section=google", `${req.protocol}://${req.get("host")}`);
+    redirect.searchParams.set("google", "connected");
+    if (result.email) redirect.searchParams.set("email", result.email);
+    return res.redirect(302, redirect.toString());
+  } catch (error) {
+    const redirect = new URL("/?section=google", `${req.protocol}://${req.get("host")}`);
+    redirect.searchParams.set("google", "error");
+    redirect.searchParams.set("message", String(error?.message || error).slice(0, 300));
+    return res.redirect(302, redirect.toString());
+  }
+});
+
 // Meta-only API. Outlook and AdsCheck endpoints were intentionally removed.
 app.all(["/metaBridge", "/api/metaBridge"], runtime.metaBridge);
 app.all(["/outlookBridge", "/outlookOAuthCallback", "/outlookWebhook", "/adscheck"], (_req, res) => {
@@ -79,12 +101,12 @@ app.get("/healthz", async (_req, res) => {
   const ok = database.ok === true;
   res.status(ok ? 200 : 503).json({
     ok,
-    service: "T Balance v7.0 Meta-only",
+    service: "T Balance v7.1 Meta + Google Sheets",
     startedAt: STARTED_AT,
     node: process.version,
     storage: "postgresql",
     database,
-    integrations: { metaGraphApi: true, outlook: false, adscheck: false },
+    integrations: { metaGraphApi: true, googleSheets: true, outlook: false, adscheck: false },
     config: {
       databaseUrl: Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_DATABASE_URL),
       appEncryptionKey: Boolean(process.env.APP_ENCRYPTION_KEY || process.env.OUTLOOK_TOKEN_KEY),
