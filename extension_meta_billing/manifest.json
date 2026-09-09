@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "T Balance • Meta Billing Sync",
+  "version": "6.0.0",
+  "description": "Bổ sung Payment Threshold và thẻ từ Meta Billing Hub cho T Balance v6.0 qua Vercel API, không dùng Firebase.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://business.facebook.com/billing_hub/*",
+    "https://business.facebook.com/ads/manager/billing*",
+    "https://adsmanager.facebook.com/adsmanager/billing*",
+    "https://www.facebook.com/ads/manager/billing*",
+    "https://*.vercel.app/*",
+    "https://tranductai.xyz/*",
+    "https://www.tranductai.xyz/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "T Balance Meta Billing Sync",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://business.facebook.com/billing_hub/*",
+        "https://business.facebook.com/ads/manager/billing*",
+        "https://adsmanager.facebook.com/adsmanager/billing*",
+        "https://www.facebook.com/ads/manager/billing*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ]
+}

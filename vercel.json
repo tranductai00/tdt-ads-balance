@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "fluid": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/adscheck",
+      "destination": "/adscheck/index.html"
+    },
+    {
+      "source": "/sodu",
+      "destination": "/sodu/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/cron/outlook-renew",
+      "schedule": "15 20 * * *"
+    }
+  ]
+}
