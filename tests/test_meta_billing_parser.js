@@ -77,6 +77,7 @@ assert.deepEqual(selectedCfg.selectedAccountIds, ["123", "456"]);
 
 assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "parse_error", transactionId: "" }, { isSuccessfulCharge: true }), true);
 assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "auto_deducted", transactionId: "tx1" }, { isSuccessfulCharge: true }), false);
+assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "parse_error", transactionId: "META-OLD-1" }, { isSuccessfulCharge: true }), true, "parse_error with existing txId must still retry");
 
 const cfg = hooks.normalizeMetaBillingConfig({ metaBillingSyncIntervalMinutes: 1, metaBillingLookbackDays: 99, metaBillingMaxAccountsPerRun: 500 });
 assert.equal(cfg.syncIntervalMinutes, 5);
@@ -147,3 +148,14 @@ assert.equal(thresholdEvent.amountConfidence, "estimated");
 assert.equal(thresholdEvent.amountSourceKey, "payment_threshold");
 
 console.log("PASS Meta Billing v6.1.6 amount recovery engine");
+
+const typedPaymentAmount = hooks.normalizeMetaBillingActivity(
+  { accountId: "1728828071611455", name: "Acc LA", currency: "VND" },
+  { event_type: "ad_account_billing_charge", event_time: Math.floor(Date.now()/1000), extra_data: { type: "payment_amount", action: 67, currency: "VND", new_value: "116651", transaction_id: "28526254503727057-28472574245761751" } },
+);
+assert.equal(typedPaymentAmount.amount, 116651);
+assert.equal(typedPaymentAmount.amountConfidence, "high");
+assert.ok(/^type:payment_amount\./.test(typedPaymentAmount.amountSourceKey));
+assert.equal(typedPaymentAmount.txId, "28526254503727057-28472574245761751");
+
+console.log("PASS Meta Billing v6.1.7 payment_amount + retry fix");

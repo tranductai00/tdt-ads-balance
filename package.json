@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-billing-api",
-  "version": "6.1.6",
+  "version": "6.1.7",
   "private": true,
-  "description": "T Balance v6.1.6 - Meta Billing Amount Recovery Engine: deep extra_data parser, Outlook reconciliation, balance delta and threshold estimate",
+  "description": "T Balance v6.1.7 - Fix Meta payment_amount/new_value parsing and retry parse_error events even when transaction_id exists",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"

@@ -1616,6 +1616,19 @@ function extractMetaBillingAmount(extraData, currency, activity = {}) {
   const genericBillingValueKey = /(?:^|\.)(?:new_value|newvalue|current_value|event_value|value|newvalue_text|new_value_text)$/i;
   const excludeKey = /(?:id|time|date|count|limit|balance|spent|threshold|cap)/i;
   const successfulBillingCharge = String(activity?.event_type || "") === "ad_account_billing_charge";
+  const rootType = String(extraData?.type || "").trim().toLowerCase();
+  const typedAmountPayload = /(?:^|_)(?:payment|charge|charged|billing|invoice|amount)(?:_|$)/i.test(rootType);
+
+  if (successfulBillingCharge && typedAmountPayload) {
+    for (const key of ["new_value", "current_value", "event_value", "value", "amount", "payment_amount", "charge_amount", "billing_amount"]) {
+      const raw = extraData?.[key];
+      if (raw === undefined || raw === null || raw === "") continue;
+      const amount = parseLocaleMoneyString(raw, String(extraData?.currency || currency || ""));
+      if (amount > 0) {
+        candidates.push({ amount, score: key === "amount" ? 14 : 12, key: `type:${rootType}.${key}`, currency: String(extraData?.currency || currency || "").toUpperCase(), typedAmountPayload: true });
+      }
+    }
+  }
 
   for (const item of flat) {
     const key = item.key || "";
@@ -1644,7 +1657,13 @@ function extractMetaBillingAmount(extraData, currency, activity = {}) {
       const raw = String(item.value ?? "").trim();
       if (/^-?[\d.,\s]+$/.test(raw) && raw.replace(/\D/g, "").length >= 1 && raw.replace(/\D/g, "").length <= 12) {
         const amount = parseLocaleMoneyString(raw, currency);
-        if (amount > 0) candidates.push({ amount, score: 7, key: key || "new_value", currency: String(currency || "").toUpperCase(), genericBillingValue: true });
+        if (amount > 0) {
+          const relatedTypeKey = key.includes('.') ? key.replace(/\.(?:new_value|newvalue|current_value|event_value|value|newvalue_text|new_value_text)$/i, '.type') : 'type';
+          const relatedTypeItem = flat.find((entry) => entry.key === relatedTypeKey || entry.key === '__decoded.type');
+          const relatedType = String(relatedTypeItem?.value || rootType || '').trim().toLowerCase();
+          const typedGeneric = /(?:^|_)(?:payment|charge|charged|billing|invoice|amount)(?:_|$)/i.test(relatedType);
+          candidates.push({ amount, score: typedGeneric ? 12 : 7, key: typedGeneric ? `type:${relatedType}.${key || "new_value"}` : (key || "new_value"), currency: String(currency || extraData?.currency || "").toUpperCase(), genericBillingValue: true, typedAmountPayload: typedGeneric });
+        }
       }
     }
 
@@ -1978,10 +1997,12 @@ async function recentMetaBillingEvents(workspace, limit = 30) {
 }
 
 function shouldRetryMetaBillingEvent(existingData = {}, event = {}) {
+  const status = String(existingData.status || "");
   return existingData.processed === true
-    && ["parse_error", "estimated", "recovered"].includes(String(existingData.status || ""))
+    && ["parse_error", "estimated", "recovered"].includes(status)
     && event.isSuccessfulCharge === true
-    && !existingData.transactionId;
+    && status !== "auto_deducted"
+    && status !== "linked_outlook";
 }
 
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
