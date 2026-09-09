@@ -51,3 +51,10 @@
 - Sửa timestamp Firestore legacy (`toMillis`) sang timestamp độc lập backend.
 - Sửa semantics xóa document để không xóa nhầm subcollection.
 - Kiểm tra thông báo số dư ngay sau cloud write và Outlook auto-deduct; cron balance chỉ còn là fallback.
+
+## v6.1.4 — Outlook Bridge 404 Fix
+- Added explicit Vercel Functions for Outlook Bridge, OAuth callback and webhook.
+- Frontend now calls `/api/outlookBridge` directly.
+- Added legacy route rewrites so existing Microsoft redirect/webhook URLs keep working.
+- Added Express aliases for both legacy and `/api/...` paths.
+- Added `/api/healthz` route for platform routing diagnostics.

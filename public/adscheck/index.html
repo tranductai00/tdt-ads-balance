@@ -2860,7 +2860,7 @@ async function callOutlookBridge(action, payload={}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 22000);
     try {
-      const response = await fetch(`${cfg.functionBase}/outlookBridge`, {
+      const response = await fetch(`${cfg.functionBase}/api/outlookBridge`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
         cache: "no-store",
@@ -3091,7 +3091,7 @@ async function connectOutlook() {
       el("outlookSyncKey").value = cfg.syncKey;
     }
     const returnUrl = `${location.origin}${location.pathname}`;
-    const url = new URL(`${cfg.functionBase}/outlookBridge`);
+    const url = new URL(`${cfg.functionBase}/api/outlookBridge`);
     url.searchParams.set("action", "authStart");
     url.searchParams.set("workspace", workspaceId);
     url.searchParams.set("key", cfg.syncKey);

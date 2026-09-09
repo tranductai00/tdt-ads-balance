@@ -69,10 +69,12 @@ function jobRoute(name, ttlMs, task) {
   };
 }
 
-// Original Cloud Function-compatible HTTP routes.
-app.all("/outlookBridge", runtime.outlookBridge);
-app.all("/outlookOAuthCallback", runtime.outlookOAuthCallback);
-app.all("/outlookWebhook", runtime.outlookWebhook);
+// Outlook HTTP routes. Keep both the legacy public paths and explicit /api
+// aliases so local Node, Vercel Express auto-detection and Vercel API Functions
+// all resolve the same handlers without platform-level 404s.
+app.all(["/outlookBridge", "/api/outlookBridge"], runtime.outlookBridge);
+app.all(["/outlookOAuthCallback", "/api/outlookOAuthCallback"], runtime.outlookOAuthCallback);
+app.all(["/outlookWebhook", "/api/outlookWebhook"], runtime.outlookWebhook);
 
 // Protected cron routes. Use cron-job.org / GitHub Actions / a real VPS cron.
 app.all("/cron/balance", jobRoute("balanceNotificationPoller", 3 * 60_000, runtime.balanceNotificationPoller));
@@ -89,7 +91,7 @@ app.get("/healthz", async (_req, res) => {
   const ok = database.ok === true;
   res.status(ok ? 200 : 503).json({
     ok,
-    service: "T Balance v6.1.3 Meta Billing API",
+    service: "T Balance v6.1.4 Outlook Bridge 404 Fix",
     startedAt: STARTED_AT,
     node: process.version,
     storage: "postgresql",

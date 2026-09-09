@@ -3,6 +3,18 @@
   "fluid": true,
   "rewrites": [
     {
+      "source": "/outlookBridge",
+      "destination": "/api/outlookBridge"
+    },
+    {
+      "source": "/outlookOAuthCallback",
+      "destination": "/api/outlookOAuthCallback"
+    },
+    {
+      "source": "/outlookWebhook",
+      "destination": "/api/outlookWebhook"
+    },
+    {
       "source": "/",
       "destination": "/index.html"
     },
@@ -20,5 +32,16 @@
       "path": "/cron/outlook-renew",
       "schedule": "15 20 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/outlookBridge.js": {
+      "maxDuration": 300
+    },
+    "api/outlookOAuthCallback.js": {
+      "maxDuration": 300
+    },
+    "api/outlookWebhook.js": {
+      "maxDuration": 300
+    }
+  }
 }

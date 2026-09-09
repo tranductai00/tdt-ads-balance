@@ -1,15 +1,15 @@
 {
   "name": "t-balance-vercel-meta-billing-api",
-  "version": "6.1.3",
+  "version": "6.1.4",
   "private": true,
-  "description": "T Balance v6.1.3 - robust Meta Billing amount parser + selected ad-account scanning + Vercel/PostgreSQL, no Firebase",
+  "description": "T Balance v6.1.4 - fix Outlook Bridge 404 on Vercel with explicit API functions + fallback routing",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
-    "check": "node --check server.js && node --check server/store.js && node --check server/outlook-runtime.js && node --check public/push-sw.js && node --check extension_adscheck_sync/background.js && node --check extension_adscheck_sync/popup.js && node --check extension_meta_billing/background.js && node --check extension_meta_billing/popup.js",
+    "check": "node --check server.js && node --check server/store.js && node --check server/outlook-runtime.js && node --check api/outlookBridge.js && node --check api/outlookOAuthCallback.js && node --check api/outlookWebhook.js && node --check api/healthz.js && node --check public/push-sw.js && node --check extension_adscheck_sync/background.js && node --check extension_adscheck_sync/popup.js && node --check extension_meta_billing/background.js && node --check extension_meta_billing/popup.js",
     "token-key": "node scripts/generate-token-key.js",
     "vapid:generate": "node scripts/generate-vapid-keys.js",
     "test": "NODE_PATH=tests/stubs NODE_ENV=test node tests/test_meta_billing_parser.js && node tests/test_billing_parser_en.js && node tests/test_billing_parser_vi.js"
