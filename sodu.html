@@ -2078,8 +2078,16 @@ function loadOutlookLocalConfig() {
   if (el("outlookRememberDevice")) el("outlookRememberDevice").checked = outlookConfig.rememberDevice !== false;
   if (!outlookConfig.deviceName) outlookConfig.deviceName = defaultDeviceName();
   if (el("outlookDeviceName")) el("outlookDeviceName").value = outlookConfig.deviceName;
+  // v7.0.1 Meta-only: notification/Outlook UI đã bị loại bỏ.
+  // Giữ compatibility shim để config/device legacy không làm dừng quá trình boot.
   updateNotificationStatus();
   updatePersistentLoginStatus();
+}
+
+function updateNotificationStatus() {
+  // Meta-only build: không còn Outlook/FCM notification panel.
+  // Hàm no-op có chủ đích để tương thích dữ liệu/config cũ.
+  return false;
 }
 
 function setOutlookUiMessage(message, error=false) {
