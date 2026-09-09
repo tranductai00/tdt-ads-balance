@@ -8,7 +8,7 @@ Module._load = function(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 process.env.NODE_ENV = "test";
-const runtime = require("../server/outlook-runtime");
+const runtime = require("../server/meta-runtime");
 const hooks = runtime.__metaBillingTestHooks;
 assert(hooks, "missing test hooks");
 
@@ -236,3 +236,39 @@ const mergedAutoThreshold = hooks.mergeConcurrentWorkspacePayload(
 assert.equal(mergedAutoThreshold.adAccounts[0].threshold, 52611, "automatic threshold should still follow newer scan when no manual override");
 
 console.log("PASS v6.1.9 ad-account manual edit merge protection");
+
+const payloadForImport = {
+  banks: [{ id: "bank-1", name: "VPB" }],
+  adAccounts: [{
+    id: "existing-1",
+    name: "Tên sửa tay",
+    accountId: "999999",
+    metaAccountId: "123456789",
+    bankId: "bank-1",
+    threshold: 777777,
+    manualNameOverride: true,
+    manualBankOverride: true,
+    manualThresholdOverride: true,
+  }],
+  transactions: [],
+  settings: {},
+};
+const importResult = hooks.mergeMetaAccountsIntoPayload(payloadForImport, [
+  { accountId: "123456789", name: "Tên từ Meta", balance: 100000, currency: "VND", status: "Đang hoạt động" },
+  { accountId: "222333444", name: "TKQC mới", balance: 250000, currency: "VND", status: "Đang hoạt động" },
+], "2026-09-09T07:00:00.000Z");
+assert.equal(importResult.scanned, 2);
+assert.equal(importResult.matched, 1);
+assert.equal(importResult.imported, 1);
+assert.equal(importResult.payload.adAccounts.length, 2);
+const existingMeta = importResult.payload.adAccounts.find((x) => x.metaAccountId === "123456789");
+assert(existingMeta);
+assert.equal(existingMeta.name, "Tên sửa tay", "manual name must survive Meta sync");
+assert.equal(existingMeta.bankId, "bank-1", "manual bank must survive Meta sync");
+assert.equal(existingMeta.threshold, 777777, "manual threshold must survive Meta sync");
+assert.equal(existingMeta.metaApiBalance, 100000);
+const importedMeta = importResult.payload.adAccounts.find((x) => x.metaAccountId === "222333444");
+assert(importedMeta);
+assert.equal(importedMeta.createdFrom, "meta_api");
+assert.equal(importedMeta.metaAutoImported, true);
+console.log("PASS Meta-only auto import ad accounts");

@@ -1,61 +1,69 @@
-# T Balance v6.1.6 — Vercel + PostgreSQL/Neon + Meta Billing Amount Recovery (không Firebase)
+# T Balance v7.0 — Meta API Only
 
-Phiên bản này giữ nguyên luồng nghiệp vụ của T Balance v5.8.6/v6.0, đồng thời bổ sung **Meta Billing API tự động** và phần cài đặt API trực tiếp trên giao diện web. Hạ tầng vẫn hoàn toàn không dùng Firebase:
+Phiên bản này chỉ dùng **Meta Graph API** làm nguồn dữ liệu tự động cho tài khoản quảng cáo và billing.
 
-- **Vercel**: web + Express API + webhook + cron endpoint.
-- **PostgreSQL/Neon**: dữ liệu cloud, thiết bị, Outlook, AdsCheck/Meta, trạng thái thông báo.
-- **Web Push VAPID**: thông báo trình duyệt thay Firebase Cloud Messaging.
-- **Microsoft Graph**: Outlook OAuth, webhook và quét dự phòng.
-- **Meta Billing API trực tiếp**: web lưu Meta Access Token đã mã hóa ở server, backend tự đọc billing activities và tự ghi nhận/tự trừ bill đủ điều kiện.
-- **Chrome Extension v6.0**: AdsCheck V6 và Meta Billing cũ vẫn được giữ như nguồn bổ sung/dự phòng.
+## Đã loại bỏ
 
-Không có `firebase`, `firebase-admin`, Firestore SDK, Cloud Functions SDK, FCM hay `cloudfunctions.net` trong runtime.
+- Outlook OAuth / Outlook Bridge / Outlook webhook / quét email.
+- AdsCheck / AdsCheck Extension / Billing Extension / browser scraping.
+- Các endpoint Outlook và AdsCheck.
 
-## Chức năng được giữ lại
+## Giữ lại
 
-- Quản lý ngân hàng, số dư, tài khoản quảng cáo và giao dịch.
-- Tự đồng bộ cloud nhiều thiết bị, khóa thiết bị, ghép thiết bị, thu hồi thiết bị.
-- AdsCheck V6 realtime/auto-sync, chọn tài khoản, tự ghép tài khoản, xóa tài khoản đã mất.
-- Meta Marketing API / Billing data và cảnh báo thiếu tiền.
-- **Meta Billing API v6.1.6:** nhập Access Token/Graph version ngay trên web; chọn TKQC cần quét; tự lấy bill; Amount Recovery Engine đọc sâu `extra_data`, đối chiếu Outlook và dùng balance/threshold fallback; chỉ tự trừ nguồn amount đủ tin cậy.
-- Outlook OAuth, nhận email Meta, webhook, tự khấu trừ, quét thủ công và quét dự phòng.
-- Web Push thông báo biến động số dư và cảnh báo AdsCheck.
-- Dashboard, UI/UX và các route cũ `/`, `/adscheck`, `/sodu`.
-- Các API bridge cũ được giữ tên để extension/frontend không phải đổi luồng: `/outlookBridge`, `/outlookOAuthCallback`, `/outlookWebhook`.
-- Các job: `/cron/balance`, `/cron/meta`, `/cron/meta-billing`, `/cron/outlook-scan`, `/cron/outlook-renew`.
+- Vercel + PostgreSQL/Neon.
+- Quản lý nguồn tiền, tài khoản quảng cáo, giao dịch.
+- Sửa thủ công TKQC bằng atomic patch.
+- Meta Access Token cài trực tiếp trên web và mã hóa ở backend.
+- Đồng bộ danh sách TKQC trực tiếp từ `/me/adaccounts`.
+- Meta Billing Activities + parser `payment_amount/action=67/new_value`.
+- Chỉ quét billing của các TKQC được chọn nếu muốn.
+- Tự trừ bill charge khi amount đủ tin cậy và khớp đúng TKQC.
 
-## Cấu trúc chính
+## Auto-import TKQC
 
-```text
-server.js                       # Express app / Vercel entry + API + cron routes
-server/store.js                 # PostgreSQL adapter tương thích logic Firestore cũ
-server/outlook-runtime.js       # Outlook / AdsCheck / Meta / Meta Billing API / Web Push
-public/index.html               # web app
-public/adscheck/index.html      # route tương thích
-public/sodu/index.html          # route tương thích
-public/push-sw.js               # Web Push service worker
-extension_adscheck_sync/        # extension AdsCheck v6.0
-extension_meta_billing/         # extension Meta Billing v6.0
-vercel.json                     # Vercel config
-.env.example                    # biến môi trường mẫu
-```
+Mỗi lần Meta API trả danh sách tài khoản, backend chạy merge theo `metaAccountId/accountId`:
 
-## Deploy nhanh
+- Nếu chưa có → tự thêm vào `data.adAccounts`.
+- Nếu đã có → cập nhật balance/status/currency/amount_spent/funding data.
+- Không ghi đè tên, ngân hàng hoặc ngưỡng đã đặt manual override.
+- Nếu người dùng đổi `accountId` hiển thị thủ công, `metaAccountId` vẫn giữ ID gốc từ Meta để tránh import trùng.
 
-Xem **DEPLOY_VERCEL.md**, **README_V6.1_META_BILLING_API.md** và **README_V6.1.6_META_BILLING_AMOUNT_RECOVERY.md**. Không cần tạo bảng SQL thủ công: `server/store.js` tự tạo bảng `tb_documents` và index ở lần chạy đầu.
+Auto-import chạy khi:
 
-## Dữ liệu từ bản cũ
+- Lưu Meta API lần đầu.
+- Kiểm tra kết nối.
+- Bấm “Tải lại TKQC”.
+- Bấm “Đồng bộ TKQC ngay”.
+- Quét Meta Billing.
+- Cron `/cron/meta-accounts`.
+- Cron `/cron/meta-billing`.
 
-Database PostgreSQL mới bắt đầu trống. Tuy nhiên nếu trình duyệt đang giữ dữ liệu T Balance trong localStorage, lần kết nối đầu tiên tới cloud mới sẽ tự đẩy snapshot local lên PostgreSQL khi cloud chưa có dữ liệu.
-
-Các secret/token chỉ từng nằm phía server (ví dụ refresh token Outlook, Meta API token, subscription server-side) không tự chuyển từ Firebase sang PostgreSQL. Hãy kết nối lại Outlook và nhập lại Meta Access Token trên giao diện web sau khi deploy nếu cần.
-
-## Kiểm tra sau deploy
-
-Mở:
+## Environment Variables
 
 ```text
-https://TEN-DU-AN.vercel.app/healthz
+DATABASE_URL=postgresql://...
+APP_ENCRYPTION_KEY=<base64 32-byte>
+CRON_SECRET=<random secret>
+WEB_APP_BASE_URL=https://your-domain.vercel.app
 ```
 
-Kết quả đúng phải có `ok: true`, `storage: "postgresql"` và `database.ok: true`.
+Tạo khóa mã hóa:
+
+```bash
+npm run token-key
+```
+
+Không cần Microsoft/Outlook credentials. Không cần Firebase. Không cần AdsCheck Extension.
+
+## Endpoint
+
+```text
+POST /api/metaBridge
+GET  /api/healthz
+GET/POST /cron/meta-accounts
+GET/POST /cron/meta-billing
+```
+
+## Deploy
+
+Xem `DEPLOY_VERCEL.md`.

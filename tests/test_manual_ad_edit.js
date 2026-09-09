@@ -8,7 +8,7 @@ Module._load = function(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 process.env.NODE_ENV = "test";
-const runtime = require("../server/outlook-runtime");
+const runtime = require("../server/meta-runtime");
 const hooks = runtime.__metaBillingTestHooks;
 assert(hooks?.applyManualAdAccountEdit, "missing applyManualAdAccountEdit hook");
 

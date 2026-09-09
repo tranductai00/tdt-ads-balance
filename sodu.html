@@ -806,7 +806,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
     <div class="brand">
       <div class="logo">T</div>
       <div>
-        <div class="brand-title">T Balance</div><div class="brand-version">v6.1.3 Meta Billing API</div>
+        <div class="brand-title">T Balance</div><div class="brand-version">v7.0 Meta API Only</div>
         
       </div>
     </div>
@@ -815,8 +815,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
       <button class="nav-btn" data-section="banks"><svg viewBox="0 0 24 24"><path d="M3 10h18"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M2.5 20h19"/><path d="m12 3 9 5H3l9-5Z"/></svg><span>Tài khoản ngân hàng</span></button>
       <button class="nav-btn" data-section="ads"><svg viewBox="0 0 24 24"><path d="M4 12h3l10-5v10L7 12H4Z"/><path d="M7 12v6"/><path d="M18 9.5a4 4 0 0 1 0 5"/></svg><span>Tài khoản QC</span></button>
       <button class="nav-btn" data-section="transactions"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/><path d="M7 15h4"/></svg><span>Thanh toán</span></button>
-      <button class="nav-btn" data-section="outlook"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><span>Outlook Meta</span></button>
-      <button class="nav-btn" data-section="adscheck"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/><path d="M8 11h6M11 8v6"/></svg><span>Meta API / Ads</span></button>
+      <button class="nav-btn" data-section="meta"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/><path d="M8 11h6M11 8v6"/></svg><span>Meta API</span></button>
       <button class="nav-btn" data-section="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.1a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 3.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2V9.6h.1a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 8 3.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2h4v.1a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 20.4 8c.1.38.3.72.6 1 .3.28.68.42 1.1.4h.1v4h-.1c-.42-.02-.8.12-1.1.4-.3.28-.5.62-.6 1Z"/></svg><span>Cài đặt</span></button>
       <small>Đồng bộ cloud an toàn · Realtime</small>
     </div>
@@ -883,7 +882,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
             <div class="card smart-metric">
               <div class="metric-kicker"><span>Ngưỡng còn lại</span><span class="metric-icon">◔</span></div>
               <div class="smart-metric-value" id="mRemainingThreshold">0 đ</div>
-              <div class="metric-foot"><span>AdsCheck V6 realtime</span><span class="micro-badge">Theo dõi tự động</span></div>
+              <div class="metric-foot"><span>Meta API realtime</span><span class="micro-badge">Theo dõi tự động</span></div>
             </div>
             <div class="card smart-metric">
               <div class="metric-kicker"><span>Cảnh báo cần nạp</span><span class="metric-icon">!</span></div>
@@ -896,7 +895,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
         <div class="dashboard-block" data-block-id="adAccounts" data-size="full">
           <div class="card section-card dashboard-panel">
             <div class="dashboard-panel-head">
-              <div><div class="dashboard-panel-title">Số dư tài khoản quảng cáo</div><div class="dashboard-panel-sub"><span id="dashboardAdSummary">Chưa có dữ liệu AdsCheck V6</span> · <span id="dashboardAdLastSync">Chưa đồng bộ</span></div></div>
+              <div><div class="dashboard-panel-title">Số dư tài khoản quảng cáo</div><div class="dashboard-panel-sub"><span id="dashboardAdSummary">Chưa có dữ liệu Meta API</span> · <span id="dashboardAdLastSync">Chưa đồng bộ</span></div></div>
               <div class="dashboard-filterbar">
                 <input id="dashboardAdSearch" placeholder="Tìm tên hoặc ID TKQC" autocomplete="off" />
                 <select id="dashboardAdView"><option value="all">Tất cả đã đồng bộ</option><option value="extension_selected">Đang theo dõi</option><option value="insufficient">Thẻ không đủ</option><option value="active">Đang hoạt động</option></select>
@@ -904,7 +903,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
                 <button id="btnDashboardRefreshAds" type="button">Làm mới</button>
               </div>
             </div>
-            <div id="dashboardAdAccountGrid" class="ad-dashboard-grid"><div class="empty-smart">Chưa có số dư tài khoản quảng cáo. Cài Extension AdsCheck V6 và đồng bộ bảng tài khoản để hiển thị.</div></div>
+            <div id="dashboardAdAccountGrid" class="ad-dashboard-grid"><div class="empty-smart">Chưa có tài khoản quảng cáo. Hãy cấu hình Meta Access Token và đồng bộ Meta API.</div></div>
           </div>
         </div>
 
@@ -925,7 +924,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
 
         <div class="dashboard-block" data-block-id="recentActivity" data-size="half">
           <div class="card section-card">
-            <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">Biến động gần đây</div><div class="dashboard-panel-sub">Giao dịch mới nhất từ Outlook và thao tác thủ công.</div></div><button class="secondary small" type="button" data-nav-section="transactions">Xem tất cả</button></div>
+            <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">Biến động gần đây</div><div class="dashboard-panel-sub">Giao dịch mới nhất từ Meta API và thao tác thủ công.</div></div><button class="secondary small" type="button" data-nav-section="transactions">Xem tất cả</button></div>
             <div id="dashboardRecentTransactions" class="recent-list"><div class="empty-smart">Chưa có giao dịch.</div></div>
           </div>
         </div>
@@ -1052,146 +1051,34 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
 
 
 
-    <section class="section" id="section-outlook">
-      <div class="grid-2">
-        <div class="card section-card glass-hero">
-          <div class="toolbar">
-            <h2 style="margin:0">Outlook Meta tự động</h2>
-            <span id="outlookConnectionBadge" class="badge warn">Chưa kết nối</span>
-          </div>
-          <div class="notice">Hệ thống chỉ xử lý email Meta nhận sau mốc bắt đầu đã đặt, không lấy lại mail cũ. Webhook xử lý tức thì và lịch tự quét 5 phút/lần hoạt động dự phòng khi webhook chậm.</div>
-          <div class="outlook-status-grid" style="margin-top:14px">
-            <div class="outlook-stat"><div class="k">Hộp thư</div><div class="v" id="outlookMailbox">Chưa kết nối</div></div>
-            <div class="outlook-stat"><div class="k">Trạng thái</div><div class="v" id="outlookStatusValue">Chưa kết nối</div></div>
-            <div class="outlook-stat"><div class="k">Bắt đầu tính từ</div><div class="v" id="outlookProcessFrom">—</div></div>
-            <div class="outlook-stat"><div class="k">Tự quét gần nhất</div><div class="v" id="outlookLastAutoScan">—</div></div>
-            <div class="outlook-stat"><div class="k">Webhook hết hạn</div><div class="v" id="outlookSubscription">—</div></div>
-            <div class="outlook-stat"><div class="k">Quét thủ công gần nhất</div><div class="v" id="outlookLastSync">—</div></div>
-          </div>
-          <div class="row" style="margin-top:14px">
-            <button id="btnOutlookConnect">Kết nối Outlook</button>
-            <button class="secondary" id="btnOutlookSync">Quét mail ngay</button>
-            <button class="danger" id="btnOutlookDisconnect">Ngắt kết nối</button>
-          </div>
-          <div id="outlookStatusText" class="footer-note">Chưa kiểm tra trạng thái Outlook.</div>
-        </div>
-
-        <div class="card section-card">
-          <h2>Cài đặt nhận diện email</h2>
-          <div class="setting-box">
-            <div class="field">
-              <label>Địa chỉ Vercel API</label>
-              <input id="outlookFunctionBase" class="outlook-code" value="" readonly />
-            </div>
-            <div class="field">
-              <label>Khóa riêng của thiết bị này</label>
-              <div class="row" style="align-items:stretch">
-                <input id="outlookSyncKey" class="outlook-code" type="password" placeholder="Được tạo tự động" readonly />
-                <button class="ghost" id="btnOutlookCopyKey" type="button">Sao chép</button>
-              </div>
-              <div class="helper-note">Mỗi thiết bị có một khóa riêng. Khóa được lưu bền vững trong Local Storage + IndexedDB và tự khôi phục khi mở lại trình duyệt.</div>
-              <label class="check-row persistent-login-row"><input id="outlookRememberDevice" type="checkbox" checked /> Ghi nhớ đăng nhập cố định trên trình duyệt này</label>
-              <div id="outlookPersistentStatus" class="upload-status">Đang kiểm tra bộ nhớ đăng nhập bền vững…</div>
-            </div>
-            <div class="divider"></div>
-            <h2 style="font-size:17px;margin:0">Đăng nhập trên thiết bị khác</h2>
-            <div id="outlookDeviceStatus" class="upload-status">Đang kiểm tra quyền của thiết bị…</div>
-            <div class="field">
-              <label>Tên thiết bị</label>
-              <input id="outlookDeviceName" placeholder="Ví dụ: MacBook của Tài" maxlength="80" />
-            </div>
-            <div class="row">
-              <button class="secondary" id="btnOutlookCreatePairingCode" type="button">Tạo mã ghép thiết bị</button>
-              <div id="outlookPairingCodeDisplay" class="upload-status" style="flex:1">Mã ghép có 8 số, dùng một lần và hết hạn sau 10 phút.</div>
-            </div>
-            <div class="row" style="align-items:flex-end">
-              <div class="field">
-                <label>Mã ghép từ thiết bị đã đăng nhập</label>
-                <input id="outlookPairingCode" class="outlook-code" inputmode="numeric" maxlength="8" placeholder="Nhập 8 chữ số" />
-              </div>
-              <button id="btnOutlookJoinDevice" type="button">Đăng nhập thiết bị này</button>
-            </div>
-            <div class="helper-note">Thiết bị web cùng domain được cấp quyền tự động. Mã ghép 8 số vẫn dùng cho Extension hoặc khi bạn bật chế độ bắt buộc ghép thiết bị trên server.</div>
-            <div class="field">
-              <label>Email gửi biên lai Meta</label>
-              <input id="outlookSender" value="noreply@business-updates.facebook.com" />
-            </div>
-            <label class="check-row"><input id="outlookAutoDeduct" type="checkbox" checked /> Tự động trừ tiền khi nhận mail mới</label>
-            <label class="check-row"><input id="outlookAutoScan" type="checkbox" checked /> Tự động quét mail mới mỗi 5 phút để dự phòng webhook</label>
-            <label class="check-row"><input id="outlookOnlyAfterStart" type="checkbox" checked disabled /> Chỉ xử lý mail nhận sau mốc bắt đầu</label>
-            <div class="row">
-              <button class="ghost" id="btnOutlookSetStartNow" type="button">Đặt mốc bắt đầu từ bây giờ</button>
-              <div class="helper-note" id="outlookStartPreview">Mail trước mốc này sẽ bị bỏ qua và không được trừ tiền.</div>
-            </div>
-            <div class="field">
-              <label>Cách tính số tiền trừ</label>
-              <select id="outlookDeductionMode">
-                <option value="exact">Trừ đúng số tiền ghi trên bill Meta</option>
-                <option value="with_fee">Cộng thêm phí thẻ đang cài đặt</option>
-              </select>
-            </div>
-            <div class="divider"></div>
-            <h2 style="font-size:17px;margin:0">Thông báo biến động số dư</h2>
-            <label class="check-row"><input id="outlookPushEnabled" type="checkbox" checked /> Gửi thông báo khi số dư thay đổi</label>
-            <div class="notice"><b>Web Push chuẩn VAPID:</b> khóa thông báo được cấu hình ở Vercel Environment Variables, không cần Firebase Console và không cần nhập khóa trên từng thiết bị.</div>
-            <div class="row">
-              <button class="secondary" id="btnOutlookEnableNotifications" type="button">Bật thông báo trên thiết bị này</button>
-              <button class="ghost" id="btnOutlookDisableNotifications" type="button">Tắt trên thiết bị này</button>
-            </div>
-            <div id="outlookNotificationStatus" class="upload-status">Thiết bị chưa đăng ký nhận thông báo.</div>
-            <button id="btnOutlookSave">Lưu cài đặt Outlook</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card section-card" style="margin-top:16px">
-        <div class="toolbar">
-          <div>
-            <h2 style="margin:0">Email Meta đã nhận diện</h2>
-            <div class="footer-note">Mail trước mốc bắt đầu không xuất hiện trong danh sách. Chống trùng theo Outlook Message ID và ID giao dịch.</div>
-          </div>
-          <button class="ghost small" id="btnOutlookRefresh">Làm mới trạng thái</button>
-        </div>
-        <div id="outlookReceiptList" class="outlook-receipt-list"><div class="empty">Chưa có email Meta.</div></div>
-      </div>
-    </section>
-
-
-    <section class="section" id="section-adscheck">
+    <section class="section" id="section-meta">
       <div class="card section-card glass-hero adscheck-hero">
         <div class="toolbar">
           <div>
-            <div class="adscheck-source-pill">● AdsCheck Pro V6 → T Balance</div>
-            <h2 style="margin:10px 0 0">Khôi phục đồng bộ trực tiếp từ AdsCheck Pro V6</h2>
-            <div class="footer-note">Extension đọc bảng tài khoản trên <b>adscheckv6.smit.vn/app/adscheck-pro</b> bằng chính phiên đăng nhập trình duyệt, sau đó gửi số dư, ngưỡng, còn lại, limit, trạng thái, thẻ và currency về T Balance. Không gọi Meta Marketing API.</div>
+            <div class="adscheck-source-pill">● Meta Graph API → T Balance</div>
+            <h2 style="margin:10px 0 0">Đồng bộ tài khoản quảng cáo trực tiếp từ Meta API</h2>
+            <div class="footer-note">T Balance chỉ sử dụng Meta Graph API. Mọi TKQC mà Access Token có quyền truy cập sẽ tự động được thêm vào dữ liệu nếu chưa tồn tại, chống trùng theo Account ID.</div>
           </div>
-          <div class="right">
-            <a class="secondary" href="https://adscheckv6.smit.vn/app/adscheck-pro" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center">Mở AdsCheck V6</a>
-            <button class="secondary" id="btnMetaApiSyncNow" type="button">Tải dữ liệu mới nhất</button>
-          </div>
+          <div class="right"><button class="secondary" id="btnMetaApiSyncNow" type="button">Đồng bộ TKQC ngay</button></div>
         </div>
         <div class="adscheck-metrics">
-          <div class="adscheck-metric"><div class="k">Đồng bộ gần nhất</div><div class="v" id="adsCheckLastSync" style="font-size:15px">Chưa có</div><span class="adscheck-sync-time" id="adsCheckSyncAge">Chưa nhận dữ liệu</span><span class="adscheck-health offline" id="adsCheckHealth">Chưa kết nối</span></div>
-          <div class="adscheck-metric"><div class="k">AdsCheck phát hiện</div><div class="v" id="adsCheckDiscoveredCount">0</div></div>
-          <div class="adscheck-metric"><div class="k">Đã đồng bộ</div><div class="v" id="adsCheckSelectedCount">0</div></div>
-          <div class="adscheck-metric"><div class="k">Đã khớp / thêm mới</div><div class="v" id="adsCheckMatchedImported">0 / 0</div></div>
-          <div class="adscheck-metric"><div class="k">Thẻ không đủ</div><div class="v" id="adsCheckInsufficient" style="color:var(--bad)">0</div></div>
-          <span id="adsCheckAccountCount" hidden>0</span>
+          <div class="adscheck-metric"><div class="k">Đồng bộ gần nhất</div><div class="v" id="adsCheckLastSync" style="font-size:15px">Chưa có</div><span class="adscheck-sync-time" id="adsCheckSyncAge">Chưa đồng bộ</span><span class="adscheck-health offline" id="adsCheckHealth">Chưa kết nối</span></div>
+          <div class="adscheck-metric"><div class="k">Meta phát hiện</div><div class="v" id="adsCheckDiscoveredCount">0</div></div>
+          <div class="adscheck-metric"><div class="k">Đã có trong data</div><div class="v" id="adsCheckSelectedCount">0</div></div>
+          <div class="adscheck-metric"><div class="k">Khớp / thêm mới</div><div class="v" id="adsCheckMatchedImported">0 / 0</div></div>
+          <div class="adscheck-metric"><div class="k">Tổng TKQC</div><div class="v" id="adsCheckAccountCount">0</div></div>
         </div>
-        <div id="adsCheckStatusText" class="upload-status" style="margin-top:14px">Chưa nhận dữ liệu từ AdsCheck Pro V6 Extension.</div>
+        <div id="adsCheckStatusText" class="upload-status" style="margin-top:14px">Chưa cấu hình Meta Access Token.</div>
       </div>
 
       <div class="card section-card" style="margin-top:16px">
         <div class="toolbar">
           <div>
-            <div class="adscheck-source-pill">● Meta Marketing API → Billing Activities</div>
-            <h2 style="margin:10px 0 0">Tự động lấy bill thanh toán từ Meta API</h2>
-            <div class="footer-note">Backend gọi trực tiếp Graph API bằng Access Token đã mã hóa trên server. Hệ thống quét billing activities của từng TKQC, chống trùng, tự khớp Account ID và có thể tự trừ bill charge thành công.</div>
+            <div class="adscheck-source-pill">● Meta Graph API → Billing Activities</div>
+            <h2 style="margin:10px 0 0">Meta API & Billing</h2>
+            <div class="footer-note">Một Access Token dùng chung cho đồng bộ TKQC và billing. Khi tải danh sách hoặc quét bill, tài khoản mới sẽ tự động được thêm vào data.</div>
           </div>
-          <div class="right">
-            <span class="badge warn" id="metaBillingApiStatusBadge">Chưa cấu hình</span>
-            <button class="secondary" id="btnMetaBillingSync" type="button">Lấy bill ngay</button>
-          </div>
+          <div class="right"><span class="badge warn" id="metaBillingApiStatusBadge">Chưa cấu hình</span><button class="secondary" id="btnMetaBillingSync" type="button">Lấy bill ngay</button></div>
         </div>
         <div class="meta-billing-grid">
           <div class="meta-billing-stat"><div class="k">API</div><div class="v" id="metaBillingTokenHint">Chưa có token</div></div>
@@ -1205,11 +1092,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
 
         <div class="grid-2" style="margin-top:16px">
           <div class="setting-box">
-            <div class="field">
-              <label>Meta Access Token</label>
-              <input id="metaBillingAccessToken" type="password" autocomplete="off" placeholder="EAAB... / System User Access Token" />
-              <div class="helper-note">Token chỉ gửi đến backend khi bấm Lưu/Kiểm tra, được mã hóa trước khi lưu PostgreSQL và không trả ngược token đầy đủ về trình duyệt.</div>
-            </div>
+            <div class="field"><label>Meta Access Token</label><input id="metaBillingAccessToken" type="password" autocomplete="off" placeholder="EAAB... / System User Access Token" /><div class="helper-note">Token được mã hóa ở backend trước khi lưu PostgreSQL. Không dùng Outlook, AdsCheck hay extension trình duyệt.</div></div>
             <div class="row">
               <div class="field" style="flex:1"><label>Graph API version</label><input id="metaBillingGraphVersion" value="v26.0" /></div>
               <div class="field" style="flex:1"><label>Chu kỳ tự quét</label><select id="metaBillingSyncInterval"><option value="5">5 phút</option><option value="10" selected>10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option><option value="60">60 phút</option></select></div>
@@ -1217,108 +1100,24 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
             </div>
           </div>
           <div class="setting-box">
-            <label class="check-row"><input id="metaBillingEnabled" type="checkbox" checked /> Bật Meta Billing API</label>
-            <label class="check-row"><input id="metaBillingAutoSync" type="checkbox" checked /> Tự động quét bill theo chu kỳ</label>
-            <label class="check-row"><input id="metaBillingAutoDeduct" type="checkbox" checked /> Tự trừ bill charge thành công sau khi khớp đúng TKQC</label>
+            <label class="check-row"><input id="metaBillingEnabled" type="checkbox" checked /> Bật Meta API</label>
+            <label class="check-row"><input id="metaBillingAutoSync" type="checkbox" checked /> Tự động đồng bộ TKQC + bill theo chu kỳ</label>
+            <label class="check-row"><input id="metaBillingAutoDeduct" type="checkbox" checked /> Tự trừ billing charge thành công sau khi khớp đúng TKQC</label>
             <label class="check-row"><input id="metaBillingOnlyVnd" type="checkbox" checked /> Chỉ tự trừ bill VND; tiền tệ khác chỉ ghi nhận</label>
-            <div class="notice"><b>An toàn:</b> chỉ tự trừ khi event là billing charge thành công, đọc được amount đủ tin cậy và khớp đúng Account ID. Refund/decline/failed vẫn được lưu nhưng không tự trừ.</div>
-            <div class="row">
-              <button id="btnMetaBillingSave" type="button">Lưu API</button>
-              <button class="secondary" id="btnMetaBillingTest" type="button">Kiểm tra kết nối</button>
-              <button class="ghost" id="btnMetaBillingClear" type="button">Xóa Token</button>
-            </div>
+            <div class="notice"><b>Auto-import:</b> tài khoản có trong Meta API nhưng chưa có trong T Balance sẽ được thêm tự động. Tên/ngân hàng/ngưỡng đã sửa thủ công vẫn được ưu tiên.</div>
+            <div class="row"><button id="btnMetaBillingSave" type="button">Lưu API</button><button class="secondary" id="btnMetaBillingTest" type="button">Kiểm tra kết nối</button><button class="ghost" id="btnMetaBillingClear" type="button">Xóa Token</button></div>
           </div>
         </div>
 
         <div class="setting-box" style="margin-top:14px">
-          <div class="toolbar">
-            <div>
-              <h3 style="margin:0;font-size:15px">Phạm vi tài khoản cần quét bill</h3>
-              <div class="helper-note">Có thể giới hạn Meta Billing chỉ quét đúng các TKQC bạn chọn để giảm API call và tránh lấy bill của tài khoản không cần theo dõi.</div>
-            </div>
-            <div class="right">
-              <select id="metaBillingSelectionMode" style="min-width:210px"><option value="all">Quét tất cả TKQC</option><option value="selected">Chỉ quét TKQC được chọn</option></select>
-              <button class="secondary" id="btnMetaBillingLoadAccounts" type="button">Tải lại TKQC</button>
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px;align-items:center">
-            <input id="metaBillingAccountSearch" style="flex:1;min-width:220px" placeholder="Tìm tên hoặc Account ID..." />
-            <button class="ghost" id="btnMetaBillingSelectAll" type="button">Chọn tất cả</button>
-            <button class="ghost" id="btnMetaBillingSelectNone" type="button">Bỏ chọn</button>
-            <span class="badge tag" id="metaBillingSelectionSummary">0 tài khoản được chọn</span>
-          </div>
+          <div class="toolbar"><div><h3 style="margin:0;font-size:15px">Phạm vi tài khoản cần quét bill</h3><div class="helper-note">Auto-import luôn lấy toàn bộ TKQC từ Meta. Bộ lọc dưới đây chỉ giới hạn tài khoản cần quét billing events.</div></div><div class="right"><select id="metaBillingSelectionMode" style="min-width:210px"><option value="all">Quét bill tất cả TKQC</option><option value="selected">Chỉ quét bill TKQC được chọn</option></select><button class="secondary" id="btnMetaBillingLoadAccounts" type="button">Tải lại TKQC</button></div></div>
+          <div class="row" style="margin-top:10px;align-items:center"><input id="metaBillingAccountSearch" style="flex:1;min-width:220px" placeholder="Tìm tên hoặc Account ID..." /><button class="ghost" id="btnMetaBillingSelectAll" type="button">Chọn tất cả</button><button class="ghost" id="btnMetaBillingSelectNone" type="button">Bỏ chọn</button><span class="badge tag" id="metaBillingSelectionSummary">0 tài khoản được chọn</span></div>
           <div id="metaBillingAccountPicker" class="meta-account-picker" style="margin-top:10px"><div class="empty">Bấm “Tải lại TKQC” sau khi lưu Access Token.</div></div>
         </div>
 
         <div class="divider"></div>
-        <div class="toolbar"><div><h2 style="margin:0;font-size:17px">Bill gần đây từ Meta API</h2><div class="footer-note">Nguồn: Ad Account Activities + Amount Recovery Engine. Ưu tiên extra_data, sau đó đối chiếu Outlook, biến động balance/amount_spent và ngưỡng thanh toán. Nguồn ước tính chỉ hiển thị, không tự trừ để tránh sai.</div></div></div>
+        <div class="toolbar"><div><h2 style="margin:0;font-size:17px">Bill gần đây từ Meta API</h2><div class="footer-note">Nguồn duy nhất: Meta Graph API / Ad Account Activities. Không đối chiếu Outlook và không dùng AdsCheck.</div></div></div>
         <div id="metaBillingRecentList" class="meta-billing-list"><div class="empty">Chưa có billing event.</div></div>
-      </div>
-
-      <div class="grid-2" style="margin-top:16px">
-        <div class="card section-card">
-          <h2>Cấu hình AdsCheck Pro V6</h2>
-          <div class="setting-box">
-            <label class="check-row"><input id="adsCheckEnabled" type="checkbox" checked /> Cho phép cập nhật dữ liệu TKQC</label>
-            <label class="check-row"><input id="adsCheckAutoImport" type="checkbox" checked /> Tự thêm TKQC chưa có</label>
-            <label class="check-row"><input id="adsCheckAutoLinkBank" type="checkbox" checked /> Tự gắn nguồn tiền theo 4 số cuối thẻ</label>
-            <label class="check-row"><input id="adsCheckUpdateThreshold" type="checkbox" checked /> Tự cập nhật ngưỡng từ AdsCheck</label>
-            <label class="check-row"><input id="adsCheckNotifyInsufficient" type="checkbox" checked /> Cảnh báo khi nguồn tiền không đủ ngưỡng</label>
-            <div class="notice"><b>Nguồn dữ liệu TKQC:</b> AdsCheck Pro V6 vẫn giữ nguyên để lấy balance/ngưỡng/thẻ. <b>Meta Billing API</b> chạy độc lập để lấy sự kiện thanh toán/bill.</div>
-            <div class="row">
-              <button id="btnAdsCheckSave">Lưu cấu hình</button>
-              <button class="secondary" id="btnAdsCheckRefresh">Tải dữ liệu từ Cloud</button>
-            </div>
-            <div style="display:none">
-              <input id="metaApiAccessToken" />
-              <input id="metaApiGraphVersion" value="v26.0" />
-              <input id="metaApiAutoSync" type="checkbox" />
-              <span id="metaApiTokenHint"></span>
-              <button id="btnMetaApiClearToken" type="button">Xóa Token API cũ</button>
-              <span id="billingExtensionStatus"></span>
-              <span id="billingExtensionLastSync"></span>
-              <span id="billingExtensionAccountCount"></span>
-              <span id="billingExtensionVersion"></span>
-              <button id="btnBillingRefreshStatus" type="button"></button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card section-card">
-          <h2>Dữ liệu lấy từ bảng AdsCheck</h2>
-          <div class="setting-box">
-            <div class="notice"><b>✓ TKQC:</b> tên và Account ID.</div>
-            <div class="notice"><b>✓ Trạng thái:</b> trạng thái tài khoản.</div>
-            <div class="notice"><b>✓ Số dư:</b> số dư/công nợ hiện tại.</div>
-            <div class="notice"><b>✓ Ngưỡng:</b> ngưỡng thanh toán hiện tại.</div>
-            <div class="notice"><b>✓ Còn lại:</b> số tiền còn tới ngưỡng.</div>
-            <div class="notice"><b>✓ Limit:</b> giới hạn tài khoản.</div>
-            <div class="notice"><b>✓ Thẻ:</b> thông tin thanh toán và 4 số cuối.</div>
-            <div class="notice"><b>✓ Currency/Owner:</b> tiền tệ và owner ID khi AdsCheck hiển thị.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card section-card" style="margin-top:16px">
-        <div class="toolbar">
-          <div>
-            <h2 style="margin:0">AdsCheck Pro V6 Extension v6.0.0</h2>
-            <div class="footer-note">Extension tự mở AdsCheck V6 ở tab nền khi cần, tự refresh, tự đọc bảng và gửi về T Balance. Có thể chọn toàn bộ hoặc chỉ các TKQC cần theo dõi.</div>
-          </div>
-        </div>
-        <div class="setting-box" style="margin-top:14px">
-          <div class="notice"><b>Cách dùng:</b> cài Extension → tạo mã ghép 8 số → nhập mã trong popup → mở AdsCheck V6 và tải danh sách TKQC. Sau đó Extension tự đồng bộ khi bảng thay đổi và theo chu kỳ dự phòng.</div>
-          <div class="row">
-            <button id="btnBillingCreatePairingCode" type="button">Tạo mã ghép Extension</button>
-            <button class="secondary" id="btnDownloadBillingExtension" type="button">Tải Extension AdsCheck V6</button>
-          </div>
-          <div id="billingPairingCodeDisplay" class="upload-status">Mã ghép dùng một lần, hết hạn sau 10 phút.</div>
-        </div>
-      </div>
-
-      <div class="card section-card" style="margin-top:16px">
-        <div class="toolbar"><div><h2 style="margin:0">Dữ liệu TKQC từ AdsCheck Pro V6</h2><div class="footer-note">Khớp chính xác theo Account ID. Balance / Threshold / Remaining / Limit / Card ưu tiên dữ liệu AdsCheck mới nhất.</div></div></div>
-        <div id="adsCheckAccountTable" class="adscheck-table"><div class="empty">Chưa có dữ liệu AdsCheck Pro V6.</div></div>
       </div>
     </section>
 
@@ -1347,7 +1146,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
           <div class="setting-box">
             <button class="secondary" id="btnDemo">Tạo dữ liệu mẫu</button>
             <button class="danger" id="btnClear">Xóa toàn bộ</button>
-            <div class="helper-note">Sau khi nhập dữ liệu, hệ thống sẽ tự lưu local và tự đẩy lên PostgreSQL Cloud. Thiết bị đã ghép cùng workspace sẽ tự cập nhật. Mỗi thiết bị có khóa riêng.</div><div><h2 style="margin:10px 0 8px;font-size:18px">Log đồng bộ</h2><div id="syncLog" class="sync-log"></div></div>
+            <div class="helper-note">Sau khi nhập dữ liệu, hệ thống sẽ tự lưu local và tự đẩy lên PostgreSQL Cloud. Thiết bị đã ghép cùng workspace sẽ tự cập nhật. Mỗi thiết bị có khóa riêng; dữ liệu Meta API được dùng chung trong workspace.</div><div><h2 style="margin:10px 0 8px;font-size:18px">Log đồng bộ</h2><div id="syncLog" class="sync-log"></div></div>
           </div>
         </div>
       </div>
@@ -1356,7 +1155,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
         <div class="toolbar">
           <div>
             <h2 style="margin:0">Quản lý thiết bị đã ghép nối</h2>
-            <div class="footer-note">Thu hồi quyền của trình duyệt, máy tính hoặc Extension không còn sử dụng. Xóa thiết bị sẽ làm khóa riêng của thiết bị đó mất quyền truy cập T Balance ngay lập tức.</div>
+            <div class="footer-note">Thu hồi quyền của trình duyệt hoặc máy tính không còn sử dụng. Xóa thiết bị sẽ làm khóa riêng của thiết bị đó mất quyền truy cập T Balance ngay lập tức.</div>
           </div>
           <div class="right">
             <button class="ghost small" id="btnRefreshPairedDevices" type="button">Làm mới</button>
@@ -1401,7 +1200,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
       <button id="btnSaveAdEdit">Lưu thay đổi</button>
       <button class="danger" id="btnDeleteAdEdit" type="button">Xóa tài khoản này</button>
     </div>
-    <div class="helper-note" style="margin-top:8px">Có thể để trống ngân hàng. Ngưỡng nhập thủ công sẽ được ưu tiên và không bị AdsCheck/Billing ghi đè; để trống hoặc 0 để quay lại ngưỡng tự động.</div>
+    <div class="helper-note" style="margin-top:8px">Có thể để trống ngân hàng. Ngưỡng nhập thủ công sẽ được ưu tiên và không bị Meta API ghi đè; để trống hoặc 0 để quay lại ngưỡng tự động.</div>
   </div>
 </div>
 
@@ -1424,9 +1223,9 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
 
 <div class="modal-backdrop" id="dashboardAdModal">
   <div class="modal" style="width:min(760px,100%)">
-    <div class="modal-head"><div><h3 style="margin:0">Chọn TKQC hiển thị trên Dashboard</h3><div class="helper-note">Danh sách lấy từ các tài khoản AdsCheck V6 đã đồng bộ.</div></div><button class="ghost small" id="btnCloseDashboardAdModal">Đóng</button></div>
+    <div class="modal-head"><div><h3 style="margin:0">Chọn TKQC hiển thị trên Dashboard</h3><div class="helper-note">Danh sách lấy từ các tài khoản đã đồng bộ trực tiếp bằng Meta API.</div></div><button class="ghost small" id="btnCloseDashboardAdModal">Đóng</button></div>
     <div class="toolbar"><input id="dashboardAdSelectionSearch" placeholder="Tìm tên hoặc ID tài khoản" /><div class="right"><button class="secondary small" id="btnDashboardSelectAll" type="button">Chọn tất cả</button><button class="ghost small" id="btnDashboardSelectNone" type="button">Bỏ chọn</button></div></div>
-    <div id="dashboardAdSelectionList" class="selection-list"><div class="empty">Chưa có dữ liệu AdsCheck V6.</div></div>
+    <div id="dashboardAdSelectionList" class="selection-list"><div class="empty">Chưa có dữ liệu Meta API.</div></div>
     <div class="row" style="margin-top:14px"><button id="btnSaveDashboardAdSelection" type="button">Lưu lựa chọn</button><span class="perf-note">⚡ Lựa chọn được lưu cloud và dùng chung trên các thiết bị.</span></div>
   </div>
 </div>
@@ -1558,11 +1357,7 @@ function updatePersistentLoginStatus(message = "") {
   node.style.color = remembered ? "var(--ok)" : "var(--warn)";
 }
 
-let outlookStatusCache = { connected: false, receipts: [] };
 let adsCheckStatusCache = { connected: false, healthy: false, tokenConfigured: false, graphVersion: "v26.0", autoSync: true, settings: { enabled: true, autoImport: true, autoLinkBank: true, updateThreshold: true, notifyInsufficient: true }, accountCount: 0, discoveredCount: 0, selectedCount: 0, insufficientCount: 0 };
-let lastAdsCheckCloudPullAtMs = 0;
-let lastBillingCloudPullAtMs = 0;
-let billingExtensionStatusCache = {};
 let metaBillingStatusCache = {};
 let metaBillingSyncInFlight = false;
 let metaBillingAvailableAccountsCache = [];
@@ -1571,10 +1366,6 @@ let metaBillingSelectionDirty = false;
 let metaBillingAutoTimer = null;
 let bridgeRequestSequence = 0;
 let outlookStatusTimer = null;
-let pushServiceWorkerRegistration = null;
-let pushSubscription = null;
-let pushMessageListenerAttached = false;
-const OUTLOOK_PUSH_TOKEN_KEY = "tbalance_outlook_push_token_v1";
 const DEFAULT_DATA = { banks: [], adAccounts: [], transactions: [], settings: { cardFeePercent: 0, dashboardLayout: null, dashboardAdAccountIds: [], deletedAdAccountIds: [] } };
 
 let data = (() => {
@@ -1754,7 +1545,7 @@ function setSection(name) {
   if (name === "settings") setTimeout(() => refreshPairedDevices({ silent: true }), 0);
 }
 function renderMobileNav() {
-  const items = [["overview","Tổng quan"],["banks","Tài khoản ngân hàng"],["ads","Tài khoản QC"],["transactions","Thanh toán"],["outlook","Outlook Meta"],["adscheck","Meta API / Ads"],["settings","Cài đặt"]];
+  const items = [["overview","Tổng quan"],["banks","Tài khoản ngân hàng"],["ads","Tài khoản QC"],["transactions","Thanh toán"],["meta","Meta API"],["settings","Cài đặt"]];
   el("mobileSectionSelect").innerHTML = items.map(([v,l]) => `<option value="${v}">${l}</option>`).join("");
 }
 function escapeHtml(str) {
@@ -2343,34 +2134,6 @@ function formatAdsCheckRelative(value) {
   return `${Math.floor(diff / 86400000)} ngày trước`;
 }
 
-function adsCheckSettingsFromUi() {
-  return {
-    enabled: el("adsCheckEnabled")?.checked !== false,
-    autoImport: el("adsCheckAutoImport")?.checked !== false,
-    autoLinkBank: el("adsCheckAutoLinkBank")?.checked !== false,
-    updateThreshold: el("adsCheckUpdateThreshold")?.checked !== false,
-    notifyInsufficient: el("adsCheckNotifyInsufficient")?.checked !== false,
-  };
-}
-
-function applyAdsCheckSettingsToUi(settings = {}) {
-  const pairs = [
-    ["adsCheckEnabled", settings.enabled !== false],
-    ["adsCheckAutoImport", settings.autoImport !== false],
-    ["adsCheckAutoLinkBank", settings.autoLinkBank !== false],
-    ["adsCheckUpdateThreshold", settings.updateThreshold !== false],
-    ["adsCheckNotifyInsufficient", settings.notifyInsufficient !== false],
-  ];
-  pairs.forEach(([id, checked]) => { if (el(id)) el(id).checked = checked; });
-  if (el("adsCheckUpdateThreshold")) el("adsCheckUpdateThreshold").checked = settings.updateThreshold !== false;
-  if (el("metaApiGraphVersion")) el("metaApiGraphVersion").value = adsCheckStatusCache?.graphVersion || "v26.0";
-  if (el("metaApiAutoSync")) el("metaApiAutoSync").checked = adsCheckStatusCache?.autoSync !== false;
-  const hint = el("metaApiTokenHint");
-  if (hint) hint.textContent = adsCheckStatusCache?.tokenConfigured
-    ? `Token đã lưu ${adsCheckStatusCache.tokenHint || ""}${adsCheckStatusCache.metaUserName ? " · " + adsCheckStatusCache.metaUserName : ""}`
-    : "Token chỉ gửi tới Cloud Function và được mã hóa trước khi lưu Firestore.";
-}
-
 function formatBillingDate(value) {
   const raw = String(value || "").trim();
   const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -2378,57 +2141,12 @@ function formatBillingDate(value) {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-function renderBillingExtensionStatus() {
-  const status = billingExtensionStatusCache || {};
-  const statusNode = el("billingExtensionStatus");
-  if (statusNode) {
-    statusNode.textContent = status.connected ? (status.healthy ? "Đã kết nối" : "Đã ghép · cần quét lại") : "Chưa có dữ liệu";
-    statusNode.style.color = status.connected ? (status.healthy ? "var(--ok)" : "var(--warn)") : "var(--muted)";
-  }
-  if (el("billingExtensionLastSync")) el("billingExtensionLastSync").textContent = status.lastSyncAtMs ? formatAdsCheckDate(status.lastSyncAtMs) : "—";
-  if (el("billingExtensionAccountCount")) el("billingExtensionAccountCount").textContent = Number(status.accountCount || 0).toLocaleString("vi-VN");
-  if (el("billingExtensionVersion")) el("billingExtensionVersion").textContent = status.extensionVersion || "—";
-}
-
-async function refreshBillingExtensionStatus(silent = true) {
-  try {
-    billingExtensionStatusCache = await callOutlookBridge("billingExtensionStatus");
-    const billingSyncMs = Number(billingExtensionStatusCache.lastSyncAtMs || 0);
-    if (cloudReady && billingSyncMs && billingSyncMs > lastBillingCloudPullAtMs) {
-      try {
-        await pullCloud();
-        lastBillingCloudPullAtMs = billingSyncMs;
-      } catch (cloudError) {
-        console.warn("Billing Extension cloud pull:", cloudError);
-      }
-    }
-    renderBillingExtensionStatus();
-    renderSmartDashboard();
-    return billingExtensionStatusCache;
-  } catch (error) {
-    if (!silent) alert(error.message || "Không tải được trạng thái Billing Extension.");
-    return null;
-  }
-}
-
-async function createBillingExtensionPairingCode() {
-  try {
-    const result = await callOutlookBridge("createPairingCode");
-    const expires = new Date(Number(result.expiresAtMs || Date.now() + 600000)).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit"});
-    const display = el("billingPairingCodeDisplay");
-    if (display) display.innerHTML = `<b style="font-size:24px;letter-spacing:.18em">${escapeHtml(result.pairingCode)}</b><br><span>Hết hạn lúc ${escapeHtml(expires)}</span>`;
-    addSyncLog("Đã tạo mã ghép AdsCheck V6 Extension.");
-  } catch (error) {
-    alert(error.message || "Không tạo được mã ghép Extension.");
-  }
-}
-
 function renderAdsCheckSection() {
   const status = adsCheckStatusCache || {};
   if (el("adsCheckLastSync")) el("adsCheckLastSync").textContent = formatAdsCheckDate(status.lastSyncAtMs);
   if (el("adsCheckSyncAge")) {
     const receivedText = status.lastReceivedAtMs ? `Máy chủ nhận: ${formatAdsCheckDate(status.lastReceivedAtMs)}` : "Máy chủ chưa nhận dữ liệu";
-    const scannedText = status.lastScannedAtMs ? `AdsCheck V6: ${formatAdsCheckDate(status.lastScannedAtMs)}` : "";
+    const scannedText = status.lastScannedAtMs ? `Meta API: ${formatAdsCheckDate(status.lastScannedAtMs)}` : "";
     el("adsCheckSyncAge").textContent = `${formatAdsCheckRelative(status.lastSyncAtMs)} · ${receivedText}${scannedText ? " · " + scannedText : ""}`;
   }
   const healthNode = el("adsCheckHealth");
@@ -2450,8 +2168,8 @@ function renderAdsCheckSection() {
     const timing = status.lastSyncAtMs ? ` Đồng bộ ${formatAdsCheckRelative(status.lastSyncAtMs)} (${formatAdsCheckDate(status.lastSyncAtMs)}).` : "";
     const reason = status.lastReason ? ` Lý do: ${status.lastReason}.` : "";
     statusNode.textContent = status.connected
-      ? `AdsCheck Pro V6 đã kết nối. Đã nhận ${Number(status.accountCount || 0)} tài khoản.${timing}${reason}${status.lastError ? " Lỗi gần nhất: " + status.lastError : ""}`
-      : "Chưa nhận dữ liệu từ Extension. Hãy cài/ghép Extension và mở AdsCheck Pro V6.";
+      ? `Meta API đã kết nối. Đã nhận ${Number(status.accountCount || 0)} tài khoản.${timing}${reason}${status.lastError ? " Lỗi gần nhất: " + status.lastError : ""}`
+      : "Chưa có dữ liệu Meta API. Hãy lưu Access Token và bấm Đồng bộ TKQC ngay.";
     statusNode.style.color = status.connected ? "var(--ok)" : "var(--warn)";
   }
 
@@ -2461,7 +2179,7 @@ function renderAdsCheckSection() {
     .filter((ad) => ad.lastAdsCheckSyncAt || ad.adsCheck || ad.uiScanLastSyncAt || ad.billingLastSyncAt || ad.metaLastSyncAt)
     .sort((a, b) => (b.lastAdsCheckSyncAt || b.uiScanLastSyncAt || b.billingLastSyncAt || b.metaLastSyncAt || "").localeCompare(a.lastAdsCheckSyncAt || a.uiScanLastSyncAt || a.billingLastSyncAt || a.metaLastSyncAt || ""));
   if (!accounts.length) {
-    table.innerHTML = '<div class="empty">Chưa có dữ liệu AdsCheck Pro V6.</div>';
+    table.innerHTML = '<div class="empty">Chưa có dữ liệu Meta API.</div>';
     return;
   }
   const header = `<div class="adscheck-row header"><div>Tài khoản</div><div>Số dư TKQC</div><div>Ngưỡng</div><div>Còn lại</div><div>Limit</div><div>Thẻ</div><div>Đủ tiền?</div></div>`;
@@ -2472,9 +2190,9 @@ function renderAdsCheckSection() {
     const state = getAdStatus(ad);
     return `<div class="adscheck-row" data-selected="${ad.adsCheckSelected !== false}">
       <div><div class="adscheck-account-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="adscheck-account-id">${escapeHtml(ad.accountId || "Chưa có ID")} · ${escapeHtml(ad.adsCheckStatus || ad.adsCheck?.status || "")}</div></div>
-      <div class="adscheck-cell"><div class="k">Số dư TKQC</div><div class="v">${money(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0)}<div class="helper-note">AdsCheck V6</div></div></div>
-      <div class="adscheck-cell"><div class="k">Ngưỡng</div><div class="v">${money(ad.adsCheck?.threshold ?? ad.threshold ?? 0)}<div class="helper-note">${ad.lastAdsCheckSyncAt ? "AdsCheck V6" : "Dữ liệu cũ"}</div></div></div>
-      <div class="adscheck-cell"><div class="k">Còn lại</div><div class="v">${money(ad.remainingThreshold || ad.adsCheck?.remainingThreshold || Math.max(0, Number(ad.adsCheck?.threshold ?? ad.threshold ?? 0) - Number(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0)))}</div></div>
+      <div class="adscheck-cell"><div class="k">Số dư TKQC</div><div class="v">${money(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0)}<div class="helper-note">Meta API</div></div></div>
+      <div class="adscheck-cell"><div class="k">Ngưỡng</div><div class="v">${money(ad.adsCheck?.threshold ?? ad.threshold ?? 0)}<div class="helper-note">${ad.lastAdsCheckSyncAt ? "Meta API" : "Dữ liệu hiện tại"}</div></div></div>
+      <div class="adscheck-cell"><div class="k">Còn lại</div><div class="v">${money(ad.remainingThreshold || ad.adsCheck?.remainingThreshold || Math.max(0, Number(ad.adsCheck?.threshold ?? ad.threshold ?? 0) - Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? 0)))}</div></div>
       <div class="adscheck-cell"><div class="k">Limit</div><div class="v">${money(ad.adsCheckLimit ?? ad.adsCheck?.limit ?? 0)}<div class="helper-note">${escapeHtml(ad.adsCheckCurrency || ad.adsCheck?.currency || "")}</div></div></div>
       <div class="adscheck-cell"><div class="k">Thẻ</div><div class="v">${escapeHtml(ad.adsCheck?.paymentMethodText || (ad.paymentCardLast4 ? "•••• " + ad.paymentCardLast4 : "----"))}</div></div>
       <div class="adscheck-cell"><div class="k">Số dư thẻ</div><div class="v"><span class="badge ${state.cls}">${state.text}</span><div class="helper-note">${escapeHtml(bank?.name || "Chưa gắn thẻ")} · ${money(bankBalance)} / cần ${money(required)}</div></div></div>
@@ -2485,72 +2203,38 @@ function renderAdsCheckSection() {
 
 async function refreshAdsCheckStatus(silent = false) {
   try {
-    const result = await callOutlookBridge("adsCheckStatus");
+    const result = await callMetaBridge("metaApiStatus");
     adsCheckStatusCache = result || {};
-    if (result?.settings) applyAdsCheckSettingsToUi(result.settings);
-    const serverSyncMs = Number(result?.lastSyncAtMs || 0);
-    if (cloudReady && serverSyncMs && serverSyncMs > lastAdsCheckCloudPullAtMs) {
-      try {
-        await pullCloud({ silent: true });
-        lastAdsCheckCloudPullAtMs = serverSyncMs;
-      } catch (cloudError) {
-        console.warn("AdsCheck V6 cloud pull:", cloudError);
-      }
-    }
     renderAdsCheckSection();
     renderSmartDashboard();
-    if (!silent) addSyncLog(`AdsCheck V6: ${Number(result?.accountCount || 0)} TKQC · ${formatAdsCheckRelative(result?.lastSyncAtMs)} · ${Number(result?.insufficientCount || 0)} thẻ thiếu tiền`);
+    if (!silent) addSyncLog(`Meta API: ${Number(result?.accountCount || 0)} TKQC · ${formatAdsCheckRelative(result?.lastSyncAtMs)}`);
     return result;
   } catch (error) {
-    if (!silent) alert(error.message || "Không tải được trạng thái AdsCheck V6.");
+    if (!silent) alert(error.message || "Không tải được trạng thái Meta API.");
     const node = el("adsCheckStatusText");
-    if (node) { node.textContent = error.message || "Không tải được trạng thái AdsCheck V6."; node.style.color = "var(--bad)"; }
+    if (node) { node.textContent = error.message || "Không tải được trạng thái Meta API."; node.style.color = "var(--bad)"; }
     return null;
-  }
-}
-
-async function saveAdsCheckSettings() {
-  try {
-    const result = await callOutlookBridge("adsCheckConfigure", { settings: adsCheckSettingsFromUi() });
-    if (result?.settings) applyAdsCheckSettingsToUi(result.settings);
-    await refreshAdsCheckStatus(true);
-    addSyncLog("Đã lưu cấu hình AdsCheck Pro V6.");
-  } catch (error) {
-    alert(error.message || "Không lưu được cấu hình AdsCheck Pro V6.");
   }
 }
 
 async function syncMetaApiNow(silent = false) {
+  const buttonIds = ["btnMetaApiSyncNow", "btnDashboardRefreshAds"];
   try {
-    const buttonIds = ["btnAdsCheckRefresh", "btnMetaApiSyncNow", "btnDashboardRefreshAds"];
     buttonIds.forEach((id) => { const node = el(id); if (node) node.disabled = true; });
+    const result = await callMetaBridge("metaApiSync", { reason: "manual" });
     await pullCloud({ silent: true });
     await refreshAdsCheckStatus(true);
     render();
     renderSmartDashboard();
-    if (!silent) addSyncLog("Đã tải dữ liệu AdsCheck V6 mới nhất từ Cloud.");
-    return true;
+    if (!silent) addSyncLog(`Meta API: ${Number(result?.scanned || 0)} TKQC · thêm mới ${Number(result?.imported || 0)} · cập nhật ${Number(result?.updated || 0)}`);
+    return result;
   } catch (error) {
-    if (!silent) alert(error.message || "Không tải được dữ liệu AdsCheck V6.");
+    if (!silent) alert(error.message || "Không đồng bộ được Meta API.");
     return null;
   } finally {
-    ["btnAdsCheckRefresh", "btnMetaApiSyncNow", "btnDashboardRefreshAds"].forEach((id) => { const node = el(id); if (node) node.disabled = false; });
+    buttonIds.forEach((id) => { const node = el(id); if (node) node.disabled = false; });
   }
 }
-
-async function clearMetaApiToken() {
-  if (!confirm("Xóa Meta Access Token đã lưu? Tự đồng bộ Meta API sẽ dừng cho đến khi nhập token mới.")) return;
-  try {
-    await callOutlookBridge("metaApiConfigure", { clearToken: true, graphVersion: String(el("metaApiGraphVersion")?.value || "v26.0"), autoSync: false, settings: adsCheckSettingsFromUi() });
-    adsCheckStatusCache = await callOutlookBridge("metaApiStatus");
-    applyAdsCheckSettingsToUi(adsCheckStatusCache.settings || {});
-    renderAdsCheckSection();
-    addSyncLog("Đã xóa Meta Access Token");
-  } catch (error) {
-    alert(error.message || "Không xóa được Meta Access Token.");
-  }
-}
-
 
 function renderMetaBillingAccountPicker() {
   const picker = el("metaBillingAccountPicker");
@@ -2595,11 +2279,13 @@ async function loadMetaBillingAccounts(silent = false) {
   if (button) { button.disabled = true; button.textContent = "Đang tải…"; }
   try {
     const cfg = metaBillingConfigFromUi();
-    const result = await callOutlookBridge("metaBillingAccounts", { accessToken: cfg.accessToken, graphVersion: cfg.graphVersion });
+    const result = await callMetaBridge("metaBillingAccounts", { accessToken: cfg.accessToken, graphVersion: cfg.graphVersion });
     metaBillingAvailableAccountsCache = Array.isArray(result.accounts) ? result.accounts : [];
     if (!metaBillingSelectionDirty && Array.isArray(result.selectedAccountIds)) metaBillingDraftSelectedIds = new Set(result.selectedAccountIds.map(String));
     renderMetaBillingAccountPicker();
-    if (!silent) addSyncLog(`Meta Billing: đã tải ${metaBillingAvailableAccountsCache.length} TKQC từ API.`);
+    if (cloudReady) await pullCloud({ silent: true });
+    render();
+    if (!silent) addSyncLog(`Meta API: đã tải ${metaBillingAvailableAccountsCache.length} TKQC và tự thêm tài khoản còn thiếu vào data.`);
     return result;
   } catch (error) {
     if (!silent) alert(error.message || "Không tải được danh sách TKQC từ Meta API.");
@@ -2615,7 +2301,7 @@ function metaBillingStatusLabel(status) {
     duplicate: ["Đã có", "tag"],
     pending_match: ["Chờ khớp TKQC", "warn"],
     parse_error: ["Meta chưa trả amount", "warn"],
-    linked_outlook: ["Đã đối chiếu Outlook", "ok"],
+    linked_outlook: ["Dữ liệu cũ đã đối chiếu", "ok"],
     recovered: ["Đã phục hồi amount", "tag"],
     estimated: ["Amount ước tính", "warn"],
     recognized: ["Đã ghi nhận", "tag"],
@@ -2676,8 +2362,8 @@ function renderMetaBillingStatus() {
     const estimated = bill.status === "estimated" || bill.amountConfidence === "estimated";
     const amountText = amount > 0 ? `${estimated ? "≈ " : ""}${bill.currency || ""} ${amount.toLocaleString("vi-VN")}`.trim() : "Meta không trả amount";
     const sourceLabel = ({
-      outlook_transaction: "Outlook đã trừ",
-      outlook_receipt: "Biên lai Outlook",
+      outlook_transaction: "Nguồn dữ liệu cũ",
+      outlook_receipt: "Biên lai cũ",
       balance_delta: "Biến động balance",
       payment_threshold: "Ngưỡng thanh toán",
     })[bill.amountRecoveryKind] || ({
@@ -2718,7 +2404,7 @@ function metaBillingConfigFromUi() {
 
 async function refreshMetaBillingStatus(silent = true, autoTrigger = false) {
   try {
-    const result = await callOutlookBridge("metaBillingStatus");
+    const result = await callMetaBridge("metaBillingStatus");
     metaBillingStatusCache = result || {};
     renderMetaBillingStatus();
     if (autoTrigger && result?.due && document.visibilityState === "visible" && !metaBillingSyncInFlight) {
@@ -2737,12 +2423,15 @@ async function saveMetaBillingConfig() {
   try {
     const config = metaBillingConfigFromUi();
     if (config.selectionMode === "selected" && !config.selectedAccountIds.length) throw new Error("Hãy chọn ít nhất 1 TKQC hoặc chuyển sang ‘Quét tất cả TKQC’. ");
-    const result = await callOutlookBridge("metaBillingConfigure", config);
+    const result = await callMetaBridge("metaBillingConfigure", config);
     if (el("metaBillingAccessToken")) el("metaBillingAccessToken").value = "";
     metaBillingStatusCache = { ...metaBillingStatusCache, ...result };
     metaBillingSelectionDirty = false;
+    if (cloudReady) await pullCloud({ silent: true });
     await refreshMetaBillingStatus(true);
-    addSyncLog("Đã lưu cấu hình Meta Billing API trên server.");
+    await refreshAdsCheckStatus(true);
+    render();
+    addSyncLog("Đã lưu Meta API và đồng bộ tự động các TKQC còn thiếu vào data.");
   } catch (error) {
     alert(error.message || "Không lưu được Meta Billing API.");
   }
@@ -2753,13 +2442,15 @@ async function testMetaBillingConnection() {
   if (button) button.disabled = true;
   try {
     const config = metaBillingConfigFromUi();
-    const result = await callOutlookBridge("metaBillingTest", {
+    const result = await callMetaBridge("metaBillingTest", {
       accessToken: config.accessToken,
       graphVersion: config.graphVersion,
     });
     const accountText = Number(result.accountCount || 0).toLocaleString("vi-VN");
     if (Array.isArray(result.accounts)) metaBillingAvailableAccountsCache = result.accounts;
     renderMetaBillingAccountPicker();
+    if (cloudReady) await pullCloud({ silent: true });
+    render();
     addSyncLog(`Meta API OK: ${result.profile?.name || "User"} · ${accountText} TKQC · activities edge truy cập được.`);
     alert(`Kết nối Meta API thành công.\nUser: ${result.profile?.name || result.profile?.id || "OK"}\nTKQC: ${accountText}\nGraph: ${result.graphVersion}`);
   } catch (error) {
@@ -2775,7 +2466,7 @@ async function syncMetaBillingBillsNow(silent = false, reason = "manual") {
   const button = el("btnMetaBillingSync");
   if (button) { button.disabled = true; button.textContent = "Đang lấy bill…"; }
   try {
-    const result = await callOutlookBridge("metaBillingSync", { reason });
+    const result = await callMetaBridge("metaBillingSync", { reason });
     if (result?.recentBills) metaBillingStatusCache.recentBills = result.recentBills;
     if (cloudReady) await pullCloud({ silent: true });
     await refreshMetaBillingStatus(true);
@@ -2796,7 +2487,7 @@ async function clearMetaBillingToken() {
   if (!confirm("Xóa Meta Access Token đã lưu? Tự lấy bill và Meta API sẽ dừng cho đến khi nhập token mới.")) return;
   try {
     const config = metaBillingConfigFromUi();
-    await callOutlookBridge("metaBillingConfigure", { ...config, accessToken: "", clearToken: true, autoSync: false });
+    await callMetaBridge("metaBillingConfigure", { ...config, accessToken: "", clearToken: true, autoSync: false });
     if (el("metaBillingAutoSync")) el("metaBillingAutoSync").checked = false;
     if (el("metaBillingAccessToken")) el("metaBillingAccessToken").value = "";
     await refreshMetaBillingStatus(true);
@@ -2806,62 +2497,7 @@ async function clearMetaBillingToken() {
   }
 }
 
-function renderOutlookStatus() {
-  const status = outlookStatusCache || { connected: false, receipts: [] };
-  const badge = el("outlookConnectionBadge");
-  if (badge) {
-    badge.textContent = status.connected ? "Đã kết nối" : "Chưa kết nối";
-    badge.className = `badge ${status.connected ? "ok" : "warn"}`;
-  }
-  if (el("outlookMailbox")) el("outlookMailbox").textContent = status.mailbox || "Chưa kết nối";
-  if (el("outlookStatusValue")) el("outlookStatusValue").textContent = status.status || (status.connected ? "connected" : "disconnected");
-  if (el("outlookSubscription")) el("outlookSubscription").textContent = formatOutlookDate(status.subscriptionExpiresAt);
-  if (el("outlookLastSync")) el("outlookLastSync").textContent = formatOutlookDate(status.lastManualSyncAt);
-  if (el("outlookLastAutoScan")) el("outlookLastAutoScan").textContent = formatOutlookDate(status.lastAutoScanAt);
-  if (el("outlookProcessFrom")) el("outlookProcessFrom").textContent = formatOutlookDate(status.settings?.processFrom);
-  if (el("outlookStartPreview")) el("outlookStartPreview").textContent = status.settings?.processFrom
-    ? `Chỉ nhận mail từ ${formatOutlookDate(status.settings.processFrom)}.`
-    : "Mail trước mốc bắt đầu sẽ bị bỏ qua.";
-  updateNotificationStatus(status.pushTokenCount);
-
-  const list = el("outlookReceiptList");
-  if (!list) return;
-  const receipts = Array.isArray(status.receipts) ? status.receipts : [];
-  if (!receipts.length) {
-    list.innerHTML = '<div class="empty">Chưa có email Meta được nhận diện.</div>';
-    return;
-  }
-  const adOptions = data.adAccounts.map(ad => `<option value="${escapeHtml(ad.id)}">${escapeHtml(ad.name)}${ad.accountId ? " · " + escapeHtml(ad.accountId) : ""}</option>`).join("");
-  list.innerHTML = receipts.map(receipt => {
-    const [label, cls] = outlookStatusLabel(receipt.status);
-    const canApply = ["pending_match", "recognized", "parse_error"].includes(receipt.status) && Number(receipt.amount || 0) > 0 && data.adAccounts.length;
-    const details = [
-      receipt.txId ? `ID: ${escapeHtml(receipt.txId)}` : "",
-      receipt.adAccountId ? `TKQC Meta: ${escapeHtml(receipt.adAccountId)}` : (receipt.matchReason === "not_found" ? "TKQC Meta: đang tự nhận diện lại" : ""),
-      receipt.cardLast4 ? `Thẻ: •••• ${escapeHtml(receipt.cardLast4)}` : "",
-      receipt.reference ? `Ref: ${escapeHtml(receipt.reference)}` : ""
-    ].filter(Boolean).join(" · ");
-    return `<div class="outlook-receipt">
-      <div class="outlook-receipt-head">
-        <div>
-          <div class="outlook-receipt-title">${escapeHtml(receipt.subject || "Biên lai Meta")}</div>
-          <div class="outlook-receipt-meta">${formatOutlookDate(receipt.receivedAt)}${details ? " · " + details : ""}</div>
-        </div>
-        <div class="right"><span class="badge ${cls}">${label}</span><span class="tx-amount">${money(receipt.deductedAmount || receipt.amount || 0)}</span></div>
-      </div>
-      ${receipt.error && !["auto_deducted", "manually_applied", "duplicate"].includes(receipt.status) ? `<div class="outlook-receipt-meta" style="color:var(--bad)">${escapeHtml(receipt.error)}</div>` : ""}
-      ${canApply ? `<div class="outlook-receipt-actions">
-        <div class="field"><label>Chọn tài khoản QC để ghi nhận</label><select data-outlook-ad-select="${escapeHtml(receipt.id)}"><option value="">Chọn tài khoản QC</option>${adOptions}</select></div>
-        <button data-outlook-apply="${escapeHtml(receipt.id)}">Ghi nhận</button>
-      </div>` : ""}
-    </div>`;
-  }).join("");
-  list.querySelectorAll("[data-outlook-apply]").forEach(button => {
-    button.onclick = () => applyOutlookReceipt(button.dataset.outlookApply);
-  });
-}
-
-async function callOutlookBridge(action, payload={}) {
+async function callMetaBridge(action, payload={}) {
   const cfg = ensureCloudSyncKey();
   const requestId = `web-${Date.now()}-${++bridgeRequestSequence}`;
   const body = JSON.stringify({
@@ -2879,7 +2515,7 @@ async function callOutlookBridge(action, payload={}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 22000);
     try {
-      const response = await fetch(`${cfg.functionBase}/api/outlookBridge`, {
+      const response = await fetch(`${cfg.functionBase}/api/metaBridge`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
         cache: "no-store",
@@ -2888,8 +2524,8 @@ async function callOutlookBridge(action, payload={}) {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.ok === false) {
-        const error = new Error(result.error || `Outlook Bridge HTTP ${response.status}`);
-        error.code = result.code || "OUTLOOK_BRIDGE_ERROR";
+        const error = new Error(result.error || `Meta API Bridge HTTP ${response.status}`);
+        error.code = result.code || "META_BRIDGE_ERROR";
         error.status = response.status;
         if (response.status < 500 || attempt === 2) throw error;
         lastError = error;
@@ -2906,7 +2542,7 @@ async function callOutlookBridge(action, payload={}) {
 }
 
 function isDeviceAuthError(error) {
-  return error?.code === "DEVICE_NOT_AUTHORIZED" || /chưa được cấp quyền|khóa đồng bộ outlook không đúng/i.test(String(error?.message || ""));
+  return error?.code === "DEVICE_NOT_AUTHORIZED" || /chưa được cấp quyền|khóa đồng bộ không đúng/i.test(String(error?.message || ""));
 }
 
 function setDeviceStatus(message, state="neutral") {
@@ -2918,7 +2554,7 @@ function setDeviceStatus(message, state="neutral") {
 
 async function refreshDeviceAuthorization({ silent = false } = {}) {
   try {
-    const result = await callOutlookBridge("deviceStatus");
+    const result = await callMetaBridge("deviceStatus");
     deviceAuthorized = !!result.authorized || !result.workspaceExists;
     if (!result.workspaceExists) {
       setDeviceStatus("Thiết bị đầu tiên: quyền sẽ được tạo tự động khi lưu dữ liệu.", "ok");
@@ -3003,7 +2639,7 @@ async function refreshPairedDevices({ silent = false } = {}) {
       if (wrap) wrap.innerHTML = '<div class="empty">Thiết bị đầu tiên sẽ được tạo khi bạn lưu dữ liệu lên cloud.</div>';
       return null;
     }
-    const result = await callOutlookBridge("listDevices");
+    const result = await callMetaBridge("listDevices");
     pairedDevicesCache = Array.isArray(result.devices) ? result.devices : [];
     deviceAuthorized = true;
     renderPairedDevices();
@@ -3018,10 +2654,10 @@ async function refreshPairedDevices({ silent = false } = {}) {
 async function removePairedDevice(deviceId, deviceName = "Thiết bị") {
   const id = String(deviceId || "").trim();
   if (!id) return;
-  const ok = confirm(`Xóa quyền truy cập của “${deviceName}”?\\n\\nThiết bị này sẽ không thể đọc/ghi dữ liệu T Balance hoặc đồng bộ Extension cho đến khi được ghép lại.`);
+  const ok = confirm(`Xóa quyền truy cập của “${deviceName}”?\\n\\nThiết bị này sẽ không thể đọc/ghi dữ liệu T Balance hoặc đồng bộ Meta API cho đến khi được ghép lại.`);
   if (!ok) return;
   try {
-    const result = await callOutlookBridge("removeDevice", { deviceId: id });
+    const result = await callMetaBridge("removeDevice", { deviceId: id });
     addSyncLog(`Đã xóa quyền thiết bị ${result.removedDeviceName || deviceName}.`);
     showStatus(`Đã thu hồi quyền của ${result.removedDeviceName || deviceName}.`);
     await refreshPairedDevices({ silent: true });
@@ -3035,10 +2671,10 @@ async function removePairedDevice(deviceId, deviceName = "Thiết bị") {
 async function removeAllOtherDevices() {
   const others = pairedDevicesCache.filter((item) => !item.isCurrent);
   if (!others.length) return;
-  const ok = confirm(`Thu hồi quyền của toàn bộ ${others.length} thiết bị khác?\\n\\nChỉ thiết bị hiện tại còn quyền truy cập. Các Extension/trình duyệt khác sẽ phải ghép lại bằng mã 8 số.`);
+  const ok = confirm(`Thu hồi quyền của toàn bộ ${others.length} thiết bị khác?\\n\\nChỉ thiết bị hiện tại còn quyền truy cập. Các trình duyệt khác sẽ phải ghép lại bằng mã 8 số.`);
   if (!ok) return;
   try {
-    const result = await callOutlookBridge("removeOtherDevices");
+    const result = await callMetaBridge("removeOtherDevices");
     addSyncLog(`Đã xóa ${Number(result.removedCount || 0)} thiết bị ghép nối khác.`);
     showStatus(`Đã thu hồi ${Number(result.removedCount || 0)} thiết bị khác.`);
     await refreshPairedDevices({ silent: true });
@@ -3051,7 +2687,7 @@ async function removeAllOtherDevices() {
 async function createDevicePairingCode() {
   try {
     setDeviceStatus("Đang tạo mã ghép…");
-    const result = await callOutlookBridge("createPairingCode");
+    const result = await callMetaBridge("createPairingCode");
     const expires = new Date(Number(result.expiresAtMs || Date.now() + 600000)).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
     const display = el("outlookPairingCodeDisplay");
     if (display) display.innerHTML = `<b style="font-size:24px;letter-spacing:.18em">${escapeHtml(result.pairingCode)}</b><br><span>Hết hạn lúc ${escapeHtml(expires)}</span>`;
@@ -3067,14 +2703,14 @@ async function joinThisDevice() {
   try {
     saveOutlookLocalConfig();
     setDeviceStatus("Đang xác thực mã ghép…");
-    const result = await callOutlookBridge("joinDevice", { pairingCode });
+    const result = await callMetaBridge("joinDevice", { pairingCode });
     deviceAuthorized = !!result.authorized;
     if (el("outlookPairingCode")) el("outlookPairingCode").value = "";
     setDeviceStatus("Đăng nhập thiết bị thành công. Đang tải dữ liệu chung…", "ok");
     ensureCloudBackend();
     await pullCloud();
     setupRealtimeSync();
-    await refreshOutlookStatus(true);
+    await refreshAdsCheckStatus(true);
     await refreshPairedDevices({ silent: true });
     showStatus("Thiết bị đã đăng nhập. Tự đồng bộ cloud đang bật.");
   } catch (error) {
@@ -3095,328 +2731,16 @@ async function copyCurrentDeviceKey() {
   }
 }
 
-async function connectOutlook() {
-  try {
-    const device = await refreshDeviceAuthorization({ silent: true });
-    if (device?.workspaceExists && !device.authorized) {
-      setDeviceStatus("Hãy ghép thiết bị trước khi kết nối Outlook.", "error");
-      return alert("Đang khôi phục quyền thiết bị web. Hãy thử lại kết nối sau vài giây.");
-    }
-    const cfg = saveOutlookLocalConfig();
-    if (!cfg.syncKey || cfg.syncKey.length < 20) {
-      cfg.syncKey = generateSecureOutlookKey();
-      outlookConfig.syncKey = cfg.syncKey;
-      persistOutlookConfig(outlookConfig);
-      el("outlookSyncKey").value = cfg.syncKey;
-    }
-    const returnUrl = `${location.origin}${location.pathname}`;
-    const url = new URL(`${cfg.functionBase}/api/outlookBridge`);
-    url.searchParams.set("action", "authStart");
-    url.searchParams.set("workspace", workspaceId);
-    url.searchParams.set("key", cfg.syncKey);
-    url.searchParams.set("clientType", "web");
-    url.searchParams.set("deviceName", cfg.deviceName || defaultDeviceName());
-    url.searchParams.set("returnUrl", returnUrl);
-    url.searchParams.set("sender", cfg.sender);
-    url.searchParams.set("autoDeduct", String(cfg.autoDeduct));
-    url.searchParams.set("deductionMode", cfg.deductionMode);
-    url.searchParams.set("autoScan", String(cfg.autoScan));
-    url.searchParams.set("pushEnabled", String(cfg.pushEnabled));
-    location.href = url.toString();
-  } catch (error) {
-    alert(error.message || "Không thể bắt đầu kết nối Outlook.");
-  }
-}
-
-async function saveOutlookServerConfig() {
-  try {
-    setOutlookUiMessage("Đang lưu cài đặt Outlook...");
-    const cfg = saveOutlookLocalConfig();
-    if (!outlookStatusCache.connected) {
-      setOutlookUiMessage("Đã lưu cài đặt trên trình duyệt. Hãy bấm Kết nối Outlook.");
-      return;
-    }
-    await callOutlookBridge("configure", {
-      sender: cfg.sender,
-      autoDeduct: cfg.autoDeduct,
-      autoScan: cfg.autoScan,
-      pushEnabled: cfg.pushEnabled,
-      deductionMode: cfg.deductionMode,
-      resetProcessFrom: false
-    });
-    setOutlookUiMessage("Đã lưu cài đặt Outlook trên máy chủ.");
-    await refreshOutlookStatus(true);
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không lưu được cài đặt Outlook.", true);
-    alert(error.message || "Không lưu được cài đặt Outlook.");
-  }
-}
-
-async function refreshOutlookStatus(silent=false) {
-  try {
-    const cfg = saveOutlookLocalConfig();
-    if (!cfg.syncKey || cfg.syncKey.length < 20) {
-      outlookStatusCache = { connected: false, receipts: [] };
-      renderOutlookStatus();
-      if (!silent) setOutlookUiMessage("Chưa có khóa đồng bộ Outlook.");
-      return;
-    }
-    if (!silent) setOutlookUiMessage("Đang kiểm tra Outlook...");
-    const result = await callOutlookBridge("status");
-    outlookStatusCache = result;
-    if (result.settings) {
-      outlookConfig.sender = result.settings.sender || outlookConfig.sender;
-      outlookConfig.autoDeduct = result.settings.autoDeduct !== false;
-      outlookConfig.autoScan = result.settings.autoScan !== false;
-      outlookConfig.pushEnabled = result.settings.pushEnabled !== false;
-      outlookConfig.deductionMode = result.settings.deductionMode === "with_fee" ? "with_fee" : "exact";
-      persistOutlookConfig(outlookConfig);
-      loadOutlookLocalConfig();
-    }
-    renderOutlookStatus();
-    if (!silent) setOutlookUiMessage(result.connected ? "Outlook đang hoạt động và chờ mail Meta mới." : "Outlook chưa được kết nối.");
-  } catch (error) {
-    const authError = isDeviceAuthError(error);
-    if (authError) {
-      deviceAuthorized = false;
-      setDeviceStatus("Thiết bị web sẽ tự khôi phục quyền khi kết nối lại.", "neutral");
-    }
-    // Không đánh dấu Outlook đã đăng xuất chỉ vì mạng/Cloud Function tạm thời lỗi.
-    outlookStatusCache = {
-      ...outlookStatusCache,
-      status: authError ? "device_not_authorized" : (outlookStatusCache.status || "connection_warning"),
-      temporaryError: error.message || "Không kiểm tra được Outlook."
-    };
-    renderOutlookStatus();
-    if (!silent) setOutlookUiMessage(`Tạm thời không kiểm tra được Outlook: ${error.message || "lỗi kết nối"}. Phiên đăng nhập vẫn được giữ.`, true);
-  }
-}
-
-async function syncOutlookNow() {
-  try {
-    setOutlookUiMessage("Đang quét email Meta mới từ mốc bắt đầu...");
-    setSyncPill("loading", "Đang quét Outlook");
-    const result = await callOutlookBridge("sync");
-    outlookStatusCache.receipts = result.receipts || [];
-    renderOutlookStatus();
-    const s = result.summary || {};
-    setOutlookUiMessage(`Đã quét ${s.checked || 0} mail mới · tự trừ ${s.autoDeducted || 0} · chờ khớp ${s.pending || 0} · bỏ trùng ${s.duplicate || 0}.`);
-    setSyncPill("ok", "Đã quét Outlook");
-    setTimeout(() => pullCloud().catch(() => {}), 600);
-    await refreshOutlookStatus(true);
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không quét được Outlook.", true);
-    setSyncPill("error", "Lỗi Outlook");
-    alert(error.message || "Không quét được Outlook.");
-  }
-}
-
-async function applyOutlookReceipt(receiptId) {
-  try {
-    const select = document.querySelector(`[data-outlook-ad-select="${CSS.escape(receiptId)}"]`);
-    const adAccountId = select?.value || "";
-    if (!adAccountId) return alert("Chọn tài khoản quảng cáo để ghi nhận.");
-    setOutlookUiMessage("Đang ghi nhận email Meta...");
-    const result = await callOutlookBridge("apply", { receiptId, adAccountId });
-    outlookStatusCache.receipts = result.receipts || [];
-    renderOutlookStatus();
-    setOutlookUiMessage("Đã ghi nhận email Meta và cập nhật số dư.");
-    setTimeout(() => pullCloud().catch(() => {}), 500);
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không ghi nhận được email.", true);
-    alert(error.message || "Không ghi nhận được email.");
-  }
-}
-
-
-function updateNotificationStatus(serverTokenCount = outlookStatusCache?.pushTokenCount) {
-  const node = el("outlookNotificationStatus");
-  if (!node) return;
-  const permission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
-  const localToken = localStorage.getItem(OUTLOOK_PUSH_TOKEN_KEY) || "";
-  const countText = Number(serverTokenCount || 0) > 0 ? ` · ${Number(serverTokenCount)} thiết bị đã đăng ký` : "";
-  if (permission === "unsupported") node.textContent = "Trình duyệt này không hỗ trợ Web Notification.";
-  else if (permission === "denied") node.textContent = `Thông báo đang bị chặn trong cài đặt trình duyệt${countText}.`;
-  else if (permission === "granted" && localToken) node.textContent = `Thiết bị này đang nhận thông báo biến động số dư${countText}.`;
-  else if (permission === "granted") node.textContent = `Đã cấp quyền nhưng thiết bị chưa đăng ký Web Push${countText}.`;
-  else node.textContent = `Chưa cấp quyền thông báo${countText}.`;
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
-}
-
-async function ensurePushReady() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("Trình duyệt không hỗ trợ Web Push.");
-  ensureCloudBackend();
-  if (!pushServiceWorkerRegistration) {
-    pushServiceWorkerRegistration = await navigator.serviceWorker.register("/push-sw.js", { scope: "/" });
-    await navigator.serviceWorker.ready;
-  }
-  if (!pushMessageListenerAttached) {
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event.data?.type !== "TBALANCE_PUSH") return;
-      const body = event.data?.body || "Có biến động số dư.";
-      setSyncPill("ok", "Có biến động số dư");
-      setOutlookUiMessage(body);
-      setTimeout(() => pullCloud().catch(() => {}), 400);
-    });
-    pushMessageListenerAttached = true;
-  }
-  pushSubscription = await pushServiceWorkerRegistration.pushManager.getSubscription();
-  return pushServiceWorkerRegistration;
-}
-
-async function enableBalanceNotifications() {
-  try {
-    const cfg = saveOutlookLocalConfig();
-    if (!outlookStatusCache.connected) throw new Error("Hãy kết nối Outlook trước khi bật thông báo.");
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") throw new Error("Bạn chưa cho phép trình duyệt gửi thông báo.");
-    const pushConfig = await callOutlookBridge("pushConfig");
-    if (!pushConfig.enabled || !pushConfig.vapidPublicKey) throw new Error("Máy chủ chưa cấu hình VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY trên Vercel.");
-    const registration = await ensurePushReady();
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(pushConfig.vapidPublicKey),
-      });
-    }
-    pushSubscription = subscription;
-    const serialized = subscription.toJSON();
-    await callOutlookBridge("registerPush", { subscription: serialized, userAgent: navigator.userAgent });
-    localStorage.setItem(OUTLOOK_PUSH_TOKEN_KEY, JSON.stringify(serialized));
-    if (el("outlookPushEnabled")) el("outlookPushEnabled").checked = true;
-    outlookConfig.pushEnabled = true;
-    saveOutlookLocalConfig();
-    await callOutlookBridge("configure", {
-      sender: cfg.sender,
-      autoDeduct: cfg.autoDeduct,
-      autoScan: cfg.autoScan,
-      pushEnabled: true,
-      deductionMode: cfg.deductionMode,
-      resetProcessFrom: false,
-    });
-    setOutlookUiMessage("Đã bật Web Push biến động số dư trên thiết bị này.");
-    await refreshOutlookStatus(true);
-    updateNotificationStatus();
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không bật được thông báo.", true);
-    alert(error.message || "Không bật được thông báo.");
-  }
-}
-
-async function disableBalanceNotifications() {
-  try {
-    const cfg = saveOutlookLocalConfig();
-    let stored = {};
-    try { stored = JSON.parse(localStorage.getItem(OUTLOOK_PUSH_TOKEN_KEY) || "{}"); } catch {}
-    const registration = await ensurePushReady().catch(() => null);
-    const subscription = registration ? await registration.pushManager.getSubscription().catch(() => null) : null;
-    const endpoint = subscription?.endpoint || stored?.endpoint || "";
-    if (endpoint && outlookStatusCache.connected) await callOutlookBridge("unregisterPush", { endpoint });
-    if (subscription) await subscription.unsubscribe().catch(() => false);
-    pushSubscription = null;
-    localStorage.removeItem(OUTLOOK_PUSH_TOKEN_KEY);
-    if (el("outlookPushEnabled")) el("outlookPushEnabled").checked = false;
-    outlookConfig.pushEnabled = false;
-    saveOutlookLocalConfig();
-    if (outlookStatusCache.connected) {
-      await callOutlookBridge("configure", {
-        sender: cfg.sender,
-        autoDeduct: cfg.autoDeduct,
-        autoScan: cfg.autoScan,
-        pushEnabled: false,
-        deductionMode: cfg.deductionMode,
-        resetProcessFrom: false,
-      });
-    }
-    setOutlookUiMessage("Đã tắt thông báo trên thiết bị này.");
-    await refreshOutlookStatus(true);
-    updateNotificationStatus();
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không tắt được thông báo.", true);
-  }
-}
-
-async function setOutlookStartNow() {
-  if (!confirm("Đặt mốc bắt đầu từ thời điểm hiện tại? Mọi email cũ hơn mốc mới sẽ bị bỏ qua.")) return;
-  try {
-    const cfg = saveOutlookLocalConfig();
-    if (!outlookStatusCache.connected) throw new Error("Hãy kết nối Outlook trước.");
-    setOutlookUiMessage("Đang đặt mốc bắt đầu mới...");
-    await callOutlookBridge("configure", {
-      sender: cfg.sender,
-      autoDeduct: cfg.autoDeduct,
-      autoScan: cfg.autoScan,
-      pushEnabled: cfg.pushEnabled,
-      deductionMode: cfg.deductionMode,
-      resetProcessFrom: true,
-    });
-    await refreshOutlookStatus(true);
-    setOutlookUiMessage("Đã đặt mốc mới. Hệ thống sẽ không lấy lại mail cũ.");
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không đặt được mốc bắt đầu.", true);
-    alert(error.message || "Không đặt được mốc bắt đầu.");
-  }
-}
-
-async function restoreForegroundNotifications() {
-  try {
-    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-    if (!localStorage.getItem(OUTLOOK_PUSH_TOKEN_KEY)) return;
-    await ensurePushReady();
-    updateNotificationStatus();
-  } catch (error) {
-    console.warn("Không khôi phục được Web Push:", error);
-  }
-}
-
-async function disconnectOutlook() {
-  if (!confirm("Ngắt kết nối Outlook? Hệ thống sẽ ngừng nhận mail Meta mới.")) return;
-  try {
-    setOutlookUiMessage("Đang ngắt kết nối Outlook...");
-    await callOutlookBridge("disconnect");
-    outlookStatusCache = { connected: false, receipts: [] };
-    renderOutlookStatus();
-    setOutlookUiMessage("Đã ngắt kết nối Outlook.");
-  } catch (error) {
-    setOutlookUiMessage(error.message || "Không ngắt được Outlook.", true);
-    alert(error.message || "Không ngắt được Outlook.");
-  }
-}
-
-function handleOutlookOAuthReturn() {
-  const params = new URLSearchParams(location.search);
-  const state = params.get("outlook");
-  if (!state) return;
-  setSection("outlook");
-  if (state === "connected") {
-    persistOutlookConfig(outlookConfig);
-    updatePersistentLoginStatus("Outlook đã kết nối và khóa thiết bị đã được lưu cố định trên trình duyệt.");
-    setOutlookUiMessage("Đã kết nối Outlook. Đang kiểm tra trạng thái...");
-  } else setOutlookUiMessage(params.get("message") || "Kết nối Outlook bị lỗi.", true);
-  params.delete("outlook");
-  params.delete("message");
-  const next = `${location.pathname}${params.toString() ? "?" + params.toString() : ""}${location.hash}`;
-  history.replaceState({}, "", next);
-}
-
-
 async function scheduleCloudSave() {
   if (!cloudReady || isApplyingRemote) return;
   clearTimeout(autoSaveTimer);
   autoSaveTimer = setTimeout(async () => {
     try {
-      const result = await callOutlookBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
+      const result = await callMetaBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
       cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
       if (result.conflictMerged) {
         await pullCloud({ silent: true });
-        showStatus("Đã hợp nhất thay đổi mới từ Extension/Outlook và lưu cloud an toàn.");
+        showStatus("Đã hợp nhất thay đổi Meta API mới nhất và lưu cloud an toàn.");
       } else showStatus("Đã tự động lưu cloud an toàn.");
     } catch (e) {
       console.error(e);
@@ -3442,7 +2766,7 @@ function prepareDashboardFinancialCache() {
 }
 
 function syncedAdsCheckAccounts() {
-  return (data.adAccounts || []).filter((ad) => ad.lastAdsCheckSyncAt || ad.adsCheck || ad.uiScanLastSyncAt || ad.billingLastSyncAt || ad.metaLastSyncAt);
+  return (data.adAccounts || []).filter((ad) => ad.metaLastSyncAt || ad.metaApi || ad.createdFrom === "meta_api");
 }
 
 function dashboardSelectedIds() {
@@ -3451,12 +2775,12 @@ function dashboardSelectedIds() {
 }
 
 function isAdsCheckActive(ad) {
-  const value = String(ad.adsCheckStatus || ad.adsCheck?.status || "").toLowerCase();
+  const value = String(ad.metaApiStatus || ad.adsCheckStatus || ad.adsCheck?.status || "").toLowerCase();
   return !/vô hiệu|vo hieu|disabled|closed|đã đóng|da dong|khóa|khoa/.test(value);
 }
 
 function adAccountBalance(ad) {
-  return Number(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0) || 0;
+  return Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? 0) || 0;
 }
 
 function adRemainingThreshold(ad) {
@@ -3496,7 +2820,7 @@ function dashboardVisibleAds() {
     if (dashboardAdViewMode === "extension_selected" && ad.adsCheckSelected === false) return false;
     if (dashboardAdViewMode === "insufficient" && dashboardAdFinancialState(ad).shortage <= 0) return false;
     if (dashboardAdViewMode === "active" && !isAdsCheckActive(ad)) return false;
-    if (q && !`${ad.name || ""} ${ad.accountId || ""} ${ad.paymentCardLast4 || ad.adsCheck?.cardLast4 || ""}`.toLowerCase().includes(q)) return false;
+    if (q && !`${ad.name || ""} ${ad.accountId || ""} ${ad.paymentCardLast4 || ad.metaApi?.cardLast4 || ""}`.toLowerCase().includes(q)) return false;
     return true;
   }).sort((a, b) => {
     const risk = dashboardAdFinancialState(b).shortage - dashboardAdFinancialState(a).shortage;
@@ -3514,7 +2838,7 @@ function renderDashboardAdCards(accounts) {
   }
   grid.innerHTML = accounts.map((ad) => {
     const state = dashboardAdFinancialState(ad);
-    const last4 = ad.paymentCardLast4 || ad.adsCheck?.cardLast4 || "----";
+    const last4 = ad.paymentCardLast4 || ad.metaApi?.cardLast4 || "----";
     return `<article class="ad-balance-card ${state.shortage > 0 ? "risk" : ""}">
       <div class="ad-card-top"><div><div class="ad-card-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="ad-card-id">${escapeHtml(ad.accountId || "Chưa có ID")}</div></div></div>
       <div class="ad-card-balance">${money(state.balance)}</div><div class="ad-card-caption">Số dư tài khoản quảng cáo hiện tại</div>
@@ -3525,7 +2849,7 @@ function renderDashboardAdCards(accounts) {
         <div><div class="k">Thẻ liên kết</div><div class="v">${escapeHtml(ad.paymentCardBrand || "")} •••• ${escapeHtml(last4)}</div></div>
         <div><div class="k">Nguồn tiền</div><div class="v" style="color:${state.shortage > 0 ? "var(--bad)" : "var(--ok)"}">${state.shortage > 0 ? `Thiếu ${money(state.shortage)}` : "Đủ thanh toán"}</div></div>
         <div><div class="k">Ngày thu tiếp</div><div class="v">${escapeHtml(formatBillingDate(ad.billingNextDate || ad.billingNextDateText))}</div></div>
-        <div><div class="k">Nguồn ngưỡng</div><div class="v">${ad.billingLastSyncAt ? "Billing Extension" : "Thủ công / cũ"}</div></div>
+        <div><div class="k">Nguồn ngưỡng</div><div class="v">${ad.metaLastSyncAt ? "Meta API" : "Thủ công"}</div></div>
       </div>
     </article>`;
   }).join("");
@@ -3621,9 +2945,8 @@ function renderSmartDashboard() {
   setText("dashboardShortageTotal", money(shortageTotal));
   setText("dashboardTrackedCount", activeSynced.length.toLocaleString("vi-VN"));
   setText("dashboardAdSummary", `${visible.length} đang hiển thị · ${tracked.length} đang theo dõi`);
-  const metaSyncText = adsCheckStatusCache?.lastSyncAtMs ? `AdsCheck V6 ${formatAdsCheckRelative(adsCheckStatusCache.lastSyncAtMs)}` : "AdsCheck V6 chưa đồng bộ";
-  const billingSyncText = billingExtensionStatusCache?.lastSyncAtMs ? `Billing ${formatAdsCheckRelative(billingExtensionStatusCache.lastSyncAtMs)}` : "Billing chưa quét";
-  setText("dashboardAdLastSync", `${metaSyncText} · ${billingSyncText}`);
+  const metaSyncText = adsCheckStatusCache?.lastSyncAtMs ? `Meta API ${formatAdsCheckRelative(adsCheckStatusCache.lastSyncAtMs)}` : "Meta API chưa đồng bộ";
+  setText("dashboardAdLastSync", metaSyncText);
   const ring = el("dashboardCoverageRing"); if (ring) ring.style.setProperty("--coverage", coverage.toFixed(1));
   const view = el("dashboardAdView"); if (view && view.value !== dashboardAdViewMode) view.value = dashboardAdViewMode;
   renderDashboardAdCards(visible);
@@ -3759,7 +3082,7 @@ function render() {
           return `<div class="linked-ad-row">
               <div class="linked-ad-main">
                 <div class="linked-ad-title">${escapeHtml(ad.name)}</div>
-                <div class="linked-ad-sub"><span>${escapeHtml(ad.accountId || "Chưa có mã")}</span><span>•••• ${escapeHtml(ad.paymentCardLast4 || ad.adsCheck?.cardLast4 || "----")}</span></div>
+                <div class="linked-ad-sub"><span>${escapeHtml(ad.accountId || "Chưa có mã")}</span><span>•••• ${escapeHtml(ad.paymentCardLast4 || ad.metaApi?.cardLast4 || "----")}</span></div>
                 <div class="linked-ad-mobile-meta"><span class="badge tag">Số dư ${money(adBalance)}</span><span class="badge tag">Ngưỡng ${money(threshold)}</span><span class="badge tag">Còn lại ${money(remaining)}</span><span class="badge ${st.cls}">${shortage > 0 ? `Thiếu ${money(shortage)}` : "Đủ thanh toán"}</span></div>
               </div>
               <div class="linked-ad-stat"><span>Số dư TKQC</span><strong>${money(adBalance)}</strong></div>
@@ -3815,7 +3138,7 @@ function render() {
     const st = getAdStatus(ad);
     const item = document.createElement("div");
     item.className = "tx";
-    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn ngân hàng")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.lastAdsCheckSyncAt ? ` · UI Scan: ${money(ad.uiScanBalance ?? ad.billingPageBalance ?? ad.adsCheckBalance ?? 0)} / ngưỡng ${money(ad.threshold || 0)} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button type="button" class="small secondary" data-edit-ad="${ad.id}" aria-label="Sửa tài khoản quảng cáo">Sửa</button><button type="button" class="small danger" data-delete-ad="${ad.id}">Xóa</button></div>`;
+    item.innerHTML = `<div class="tx-left"><div class="tx-title">${escapeHtml(ad.name)}</div><div class="muted">${escapeHtml(ad.accountId || "Chưa có mã")} · ${escapeHtml(bank?.name || "Chưa gắn ngân hàng")} · Cần đủ: ${money(getThresholdCharge(ad))}${ad.metaLastSyncAt ? ` · Meta API: ${money(ad.metaApiBalance ?? 0)}${ad.metaCurrency ? " " + escapeHtml(ad.metaCurrency) : ""} · thẻ •••• ${escapeHtml(ad.paymentCardLast4 || "----")}` : ""}</div></div><div class="right"><span class="badge ${st.cls}">${st.text}</span><span class="tx-amount">${money(getAdPaymentTotal(ad.id))}</span><button type="button" class="small secondary" data-edit-ad="${ad.id}" aria-label="Sửa tài khoản quảng cáo">Sửa</button><button type="button" class="small danger" data-delete-ad="${ad.id}">Xóa</button></div>`;
     adMenuList.appendChild(item);
   });
 
@@ -3841,7 +3164,6 @@ function render() {
   document.querySelectorAll("[data-edit-tx]").forEach(btn => btn.onclick = () => openTxModal(btn.dataset.editTx));
   document.querySelectorAll("[data-delete-tx]").forEach(btn => btn.onclick = () => deleteTransaction(btn.dataset.deleteTx));
 
-  renderOutlookStatus();
   renderAdsCheckSection();
 }
 function ensureCloudBackend() {
@@ -3899,21 +3221,21 @@ function applyIncomingData(incoming, statusMsg) {
 }
 async function pushCloud() {
   if (!cloudReady) return alert("Kết nối cloud trước.");
-  const result = await callOutlookBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
+  const result = await callMetaBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
   cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
   if (result.conflictMerged) {
     await pullCloud({ silent: true });
-    showStatus("Đã hợp nhất dữ liệu mới từ Extension/Outlook trước khi đẩy cloud.");
+    showStatus("Đã hợp nhất dữ liệu Meta API mới nhất trước khi đẩy cloud.");
   } else showStatus("Đã đẩy dữ liệu lên cloud an toàn.");
 }
 async function pullCloud({ silent = false } = {}) {
   if (!cloudReady) return alert("Kết nối cloud trước.");
-  const result = await callOutlookBridge("workspaceGet");
+  const result = await callMetaBridge("workspaceGet");
   const incoming = result.payload || { banks: [], adAccounts: [], transactions: [], settings: {} };
   const remoteVersion = Number(result.updatedAtMs || 0);
   const hasRemoteData = (incoming.banks?.length || incoming.adAccounts?.length || incoming.transactions?.length || Object.keys(incoming.settings || {}).length);
   if (!hasRemoteData && data.banks.length + data.adAccounts.length + data.transactions.length > 0) {
-    const saved = await callOutlookBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
+    const saved = await callMetaBridge("workspaceSet", { payload: data, baseUpdatedAtMs: cloudRemoteVersion });
     cloudRemoteVersion = Number(saved.updatedAtMs || Date.now());
     if (!silent) showStatus("Cloud mới được tạo. Dữ liệu hiện tại đã được lưu lên.");
     return;
@@ -3933,7 +3255,7 @@ async function pollCloudChanges() {
   if (!cloudReady || cloudPollInFlight || document.visibilityState !== "visible") return;
   cloudPollInFlight = true;
   try {
-    const result = await callOutlookBridge("workspaceGet");
+    const result = await callMetaBridge("workspaceGet");
     const remoteVersion = Number(result.updatedAtMs || 0);
     if (remoteVersion && remoteVersion !== cloudRemoteVersion) {
       const incoming = result.payload || {};
@@ -4158,7 +3480,7 @@ async function saveAdEdit() {
     clearTimeout(autoSaveTimer);
     if (cloudReady) {
       // v6.2.0: patch atomically đúng 1 TKQC trên server, không gửi lại toàn workspace.
-      const result = await callOutlookBridge("adAccountManualUpdate", { edit: editPayload });
+      const result = await callMetaBridge("adAccountManualUpdate", { edit: editPayload });
       cloudRemoteVersion = Number(result.updatedAtMs || Date.now());
       if (result.payload) {
         applyIncomingData(result.payload, "");
@@ -4213,7 +3535,7 @@ function deleteAdAccount(id) {
     ? `\n\nCó ${related.length} giao dịch lịch sử. Giao dịch và số dư ngân hàng sẽ được GIỮ NGUYÊN.`
     : "";
   const syncedText = ad.lastAdsCheckSyncAt || ad.adsCheck
-    ? "\n\nTài khoản này cũng sẽ được đánh dấu bỏ qua để AdsCheck V6 không tự nhập lại."
+    ? "\n\nTài khoản này có thể được Meta API tự thêm lại ở lần đồng bộ tiếp theo nếu token vẫn có quyền truy cập."
     : "";
   if (!confirm(`Xóa tài khoản quảng cáo “${ad.name || "TKQC"}”?${accountText}${historyText}${syncedText}`)) return;
 
@@ -4238,7 +3560,7 @@ function deleteAdAccount(id) {
   }
   data.adAccounts = data.adAccounts.filter((item) => item.id !== ad.id);
   if (editingAdId === ad.id) closeAdModal();
-  addSyncLog(`Đã xóa TKQC ${ad.name || ad.accountId || ad.id} và chặn tự nhập lại từ AdsCheck V6.`);
+  addSyncLog(`Đã xóa TKQC ${ad.name || ad.accountId || ad.id}. Meta API có thể tự thêm lại nếu tài khoản vẫn còn quyền truy cập.`);
   persist();
 }
 function seedDemo() {
@@ -4279,7 +3601,7 @@ async function autoConnectIfConfigured() {
     if (isDeviceAuthError(e)) {
       deviceAuthorized = false;
       showStatus("Đang tự khôi phục quyền thiết bị web. Hãy thử tải lại trang nếu kết nối chưa hoàn tất.", true);
-      setDeviceStatus("Thiết bị web được cấp quyền tự động. Extension vẫn dùng mã ghép 8 số.", "neutral");
+      setDeviceStatus("Thiết bị web được cấp quyền tự động.", "neutral");
       return;
     }
     showStatus(e?.message || "Không tự động kết nối được Vercel Cloud.", true);
@@ -4343,39 +3665,29 @@ el("btnSaveAdEdit").addEventListener("click", saveAdEdit);
 el("btnDeleteAdEdit")?.addEventListener("click", () => { if (editingAdId) deleteAdAccount(editingAdId); });
 el("btnSaveTxEdit").addEventListener("click", saveTxEdit);
 el("btnAnalyzeBill").addEventListener("click", analyzeBill);
-el("btnOutlookCopyKey").addEventListener("click", copyCurrentDeviceKey);
-el("btnOutlookCreatePairingCode").addEventListener("click", createDevicePairingCode);
-el("btnOutlookJoinDevice").addEventListener("click", joinThisDevice);
+
+
+
 el("btnRefreshPairedDevices")?.addEventListener("click", () => refreshPairedDevices({ silent: false }));
 el("btnRemoveOtherDevices")?.addEventListener("click", removeAllOtherDevices);
-el("outlookPairingCode").addEventListener("input", (event) => {
-  event.target.value = String(event.target.value || "").replace(/\D/g, "").slice(0, 8);
-});
-el("outlookDeviceName").addEventListener("change", saveOutlookLocalConfig);
-el("outlookRememberDevice").addEventListener("change", () => {
-  saveOutlookLocalConfig();
-  if (outlookConfig.rememberDevice !== false) {
-    persistOutlookConfig(outlookConfig);
-    updatePersistentLoginStatus("Đã bật ghi nhớ đăng nhập cố định trên trình duyệt này.");
-  } else {
-    updatePersistentLoginStatus("Đã tắt ghi nhớ bền vững; khóa vẫn giữ trong phiên hiện tại.");
-  }
-});
-el("btnOutlookConnect").addEventListener("click", connectOutlook);
-el("btnOutlookSave").addEventListener("click", saveOutlookServerConfig);
-el("btnOutlookSync").addEventListener("click", syncOutlookNow);
-el("btnOutlookDisconnect").addEventListener("click", disconnectOutlook);
-el("btnOutlookRefresh").addEventListener("click", () => refreshOutlookStatus(false));
-el("btnOutlookSetStartNow").addEventListener("click", setOutlookStartNow);
-el("btnOutlookEnableNotifications").addEventListener("click", enableBalanceNotifications);
-el("btnOutlookDisableNotifications").addEventListener("click", disableBalanceNotifications);
-el("btnAdsCheckSave").addEventListener("click", saveAdsCheckSettings);
-el("btnAdsCheckRefresh")?.addEventListener("click", () => syncMetaApiNow(false));
-el("btnBillingRefreshStatus")?.addEventListener("click", () => refreshBillingExtensionStatus(false));
-el("btnBillingCreatePairingCode")?.addEventListener("click", createBillingExtensionPairingCode);
-el("btnDownloadBillingExtension")?.addEventListener("click", () => { window.location.href = "/T_Balance_AdsCheckV6_Sync_Extension_v6.0.0.zip"; });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 el("btnMetaApiSyncNow")?.addEventListener("click", () => syncMetaApiNow(false));
-el("btnMetaApiClearToken")?.addEventListener("click", clearMetaApiToken);
+
 el("btnMetaBillingSave")?.addEventListener("click", saveMetaBillingConfig);
 el("btnMetaBillingTest")?.addEventListener("click", testMetaBillingConnection);
 el("btnMetaBillingSync")?.addEventListener("click", () => syncMetaBillingBillsNow(false, "manual"));
@@ -4447,17 +3759,14 @@ async function bootApplication() {
   await restoreOutlookConfigFromVault();
   loadOutlookLocalConfig();
   ensureCloudSyncKey();
-  handleOutlookOAuthReturn();
   await refreshDeviceAuthorization({ silent: true });
   await autoConnectIfConfigured();
-  await Promise.allSettled([refreshOutlookStatus(true), refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
-  if (location.pathname.toLowerCase().includes("adscheck")) setSection("adscheck");
-  setTimeout(restoreForegroundNotifications, 1200);
+  await Promise.allSettled([refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
+  if (location.pathname.toLowerCase().includes("meta")) setSection("meta");
+  setTimeout(() => syncMetaApiNow(true), 1200);
   outlookStatusTimer = setInterval(() => {
-    if (document.visibilityState === "visible") {
-      Promise.allSettled([refreshOutlookStatus(true), refreshAdsCheckStatus(true)]);
-    }
-  }, 15000);
+    if (document.visibilityState === "visible") refreshAdsCheckStatus(true);
+  }, 60000);
   metaBillingAutoTimer = setInterval(() => {
     if (document.visibilityState === "visible") refreshMetaBillingStatus(true, true);
   }, 60000);
@@ -4469,7 +3778,7 @@ document.addEventListener("visibilitychange", () => {
   else if (cloudReady) Promise.allSettled([pollCloudChanges(), refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
 });
 window.addEventListener("online", () => {
-  if (cloudReady) Promise.allSettled([pollCloudChanges(), refreshOutlookStatus(true), refreshAdsCheckStatus(true), refreshMetaBillingStatus(true, true)]);
+  if (cloudReady) Promise.allSettled([pollCloudChanges(), syncMetaApiNow(true), refreshMetaBillingStatus(true, true)]);
 });
 bootApplication().catch((error) => {
   console.error("Khởi tạo ứng dụng:", error);
