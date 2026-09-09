@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "T Balance • AdsCheck V6 Realtime Data",
+  "version": "7.2.0",
+  "description": "Lấy realtime số dư, ngưỡng, còn lại, thẻ và ngày thu từ AdsCheck V6; bill thanh toán vẫn do Meta API xử lý.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs",
+    "notifications",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://*.vercel.app/*",
+    "https://adscheck.smit.vn/*",
+    "https://adscheckv6.smit.vn/*",
+    "https://tranductai.xyz/*",
+    "https://www.tranductai.xyz/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "T Balance AdsCheck V6 Realtime Sync",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://adscheckv6.smit.vn/app/adscheck-pro*",
+        "https://adscheck.smit.vn/app/adscheck-pro*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ]
+}
