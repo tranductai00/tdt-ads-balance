@@ -1135,7 +1135,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
             <div class="field"><label>Google OAuth Client ID</label><input id="googleClientId" autocomplete="off" placeholder="xxxx.apps.googleusercontent.com" /></div>
             <div class="field"><label>Google OAuth Client Secret</label><input id="googleClientSecret" type="password" autocomplete="off" placeholder="Nhập ở lần cấu hình đầu tiên" /></div>
             <div class="field"><label>Authorized redirect URI</label><input id="googleRedirectUri" readonly /></div>
-            <div class="row"><button id="btnGoogleSaveCredentials" type="button">Lưu OAuth</button><button class="secondary" id="btnGoogleConnect" type="button">Kết nối Google</button><button class="danger" id="btnGoogleDisconnect" type="button">Ngắt Google</button></div>
+            <div class="row"><button id="btnGoogleSaveCredentials" type="button">Lưu OAuth</button><button class="secondary" id="btnGoogleConnect" type="button">Kết nối Google</button><button class="danger" id="btnGoogleDisconnect" type="button">Ngắt Google</button><button class="danger" id="btnGoogleResetCredentials" type="button">Xóa OAuth cũ</button></div>
             <div class="upload-status" id="googleConnectionStatus">Chưa kết nối Google.</div>
           </div>
         </div>
@@ -3891,9 +3891,15 @@ function renderGoogleSheetsStatus(status = googleSheetsStatusCache) {
   const connected = !!status.connected;
   const badge = el("googleSheetStatusBadge");
   if (badge) { badge.textContent = connected ? "Đã kết nối" : "Chưa kết nối"; badge.className = `badge ${connected ? "ok" : "warn"}`; }
-  if (el("googleConnectionStatus")) el("googleConnectionStatus").textContent = connected
-    ? `Đã kết nối ${status.email || "Google account"}${status.clientIdHint ? ` · OAuth ${status.clientIdHint}` : ""}`
-    : status.clientConfigured ? "Đã lưu OAuth credentials · bấm Kết nối Google." : "Chưa cấu hình Google OAuth.";
+  if (el("googleConnectionStatus")) {
+    const source = status.credentialSource === "env" ? " · ENV" : "";
+    const project = status.projectNumber ? ` · Project #${status.projectNumber}` : "";
+    el("googleConnectionStatus").textContent = status.deletedProject
+      ? `OAuth đang trỏ tới Google Cloud Project #${status.projectNumber} đã bị xóa. Hãy bấm “Xóa OAuth cũ”, tạo Client ID/Secret mới và lưu lại.`
+      : connected
+        ? `Đã kết nối ${status.email || "Google account"}${status.clientIdHint ? ` · OAuth ${status.clientIdHint}` : ""}${project}${source}`
+        : status.clientConfigured ? `Đã lưu OAuth credentials${project}${source} · bấm Kết nối Google.` : "Chưa cấu hình Google OAuth.";
+  }
   if (el("googleRedirectUri")) el("googleRedirectUri").value = status.redirectUri || `${location.origin}/auth/google/callback`;
   if (el("googleStartFromText")) el("googleStartFromText").textContent = status.startFromMs ? googleFmtTime(status.startFromMs) : "Chưa đặt";
   if (el("googleLastSyncText")) el("googleLastSyncText").textContent = googleFmtTime(status.lastAutoSyncAtMs || status.lastManualFillAtMs);
@@ -3942,6 +3948,16 @@ async function connectGoogleSheets() {
 async function disconnectGoogleSheets() {
   if (!confirm("Ngắt kết nối Google Sheets? Tự động điền báo cáo sẽ dừng.")) return;
   try { await callMetaBridge("googleSheetsDisconnect"); await refreshGoogleSheetsStatus(false); } catch (error) { alert(error.message); }
+}
+async function resetGoogleOAuthCredentials() {
+  if (!confirm("Xóa toàn bộ Google OAuth Client ID/Secret và token cũ? Cấu hình Google Sheet vẫn được giữ nguyên.")) return;
+  try {
+    await callMetaBridge("googleSheetsCredentialsReset");
+    if (el("googleClientId")) el("googleClientId").value = "";
+    if (el("googleClientSecret")) el("googleClientSecret").value = "";
+    await refreshGoogleSheetsStatus(false);
+    alert("Đã xóa OAuth cũ. Hãy nhập Client ID/Secret từ Google Cloud project đang hoạt động rồi Kết nối Google lại.");
+  } catch (error) { alert(error.message); }
 }
 function googleSheetSettingsFromUi() {
   return {
@@ -3992,6 +4008,7 @@ async function fillGoogleSheetAll() {
 el("btnGoogleSaveCredentials")?.addEventListener("click", () => saveGoogleOAuthCredentials(false));
 el("btnGoogleConnect")?.addEventListener("click", connectGoogleSheets);
 el("btnGoogleDisconnect")?.addEventListener("click", disconnectGoogleSheets);
+el("btnGoogleResetCredentials")?.addEventListener("click", resetGoogleOAuthCredentials);
 el("btnGoogleSaveSheet")?.addEventListener("click", saveGoogleSheetSettings);
 el("btnGoogleTestSheet")?.addEventListener("click", testGoogleSheet);
 el("btnGoogleStartNow")?.addEventListener("click", () => setGoogleAuto(true));

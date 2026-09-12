@@ -16,4 +16,9 @@ assert.equal(gs.eventBillingDate("2026-09-08T18:30:00.000Z", "Asia/Ho_Chi_Minh")
 assert.deepEqual(gs.computeSheetTotals({ current: 100000, eventTotal: 20000, alreadySyncedTotal: 0, baselineInitialized: false }), { baseline: 100000, total: 120000 });
 assert.deepEqual(gs.computeSheetTotals({ current: 120000, eventTotal: 20000, alreadySyncedTotal: 20000, baselineInitialized: false }), { baseline: 100000, total: 120000 });
 assert.deepEqual(gs.computeSheetTotals({ eventTotal: 150000, autoEventTotal: 50000, rewriteExact: true }), { baseline: 100000, total: 150000 });
-console.log("PASS v7.1.0 Google Sheets mapping + baseline helpers");
+
+assert.equal(gs.googleClientProjectNumber("448232912482-abc123.apps.googleusercontent.com"), "448232912482");
+assert.throws(() => gs.assertUsableGoogleClientId("448232912482-abc123.apps.googleusercontent.com"), /đã bị xóa/);
+assert.equal(gs.googleClientProjectNumber("123456789012-abc123.apps.googleusercontent.com"), "123456789012");
+assert.equal(gs.assertUsableGoogleClientId("123456789012-abc123.apps.googleusercontent.com"), "123456789012-abc123.apps.googleusercontent.com");
+console.log("PASS v7.2.2 Google Sheets mapping + OAuth project guard");

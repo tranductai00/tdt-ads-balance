@@ -65,6 +65,37 @@ function mask(value, left = 8, right = 5) {
   if (v.length <= left + right) return `${v.slice(0, Math.min(4, v.length))}…`;
   return `${v.slice(0, left)}…${v.slice(-right)}`;
 }
+function googleClientProjectNumber(clientId) {
+  const match = String(clientId || "").trim().match(/^(\d+)-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i);
+  return match?.[1] || "";
+}
+function deletedGoogleProjectNumbers() {
+  return new Set(
+    String(process.env.GOOGLE_OAUTH_DELETED_PROJECTS || "448232912482")
+      .split(",")
+      .map(v => v.trim())
+      .filter(Boolean)
+  );
+}
+function assertUsableGoogleClientId(clientId) {
+  const value = String(clientId || "").trim();
+  if (!value) throw new Error("Hãy nhập Google OAuth Client ID.");
+  if (!/^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test(value)) {
+    throw new Error("Google OAuth Client ID không đúng định dạng Web application (*.apps.googleusercontent.com).");
+  }
+  const projectNumber = googleClientProjectNumber(value);
+  if (projectNumber && deletedGoogleProjectNumbers().has(projectNumber)) {
+    const error = new Error(`Google Cloud project #${projectNumber} đã bị xóa. Hãy tạo OAuth Client ID/Secret mới trong một Google Cloud project đang hoạt động rồi lưu lại OAuth.`);
+    error.code = "GOOGLE_OAUTH_PROJECT_DELETED";
+    throw error;
+  }
+  return value;
+}
+function envGoogleCredentials() {
+  const clientId = String(process.env.GOOGLE_OAUTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim();
+  const clientSecret = String(process.env.GOOGLE_OAUTH_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "").trim();
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
 function stateRef(workspace) { return db.collection(GOOGLE_STATES).doc(workspace); }
 function normalizeAccountId(v) { return String(v || "").replace(/\D/g, ""); }
 function extractSpreadsheetId(input) {
@@ -120,21 +151,40 @@ async function getState(workspace) {
 }
 async function saveCredentials(workspace, input = {}) {
   const previous = await getState(workspace);
-  const clientId = String(input.clientId || previous.googleClientId || "").trim();
+  const clientId = assertUsableGoogleClientId(input.clientId || previous.googleClientId || "");
   const clientSecret = String(input.clientSecret || "").trim();
-  if (!clientId) throw new Error("Hãy nhập Google OAuth Client ID.");
-  const patch = { googleClientId: clientId, updatedAt: FieldValue.serverTimestamp() };
+  const clientChanged = Boolean(previous.googleClientId && previous.googleClientId !== clientId);
+  const patch = { googleClientId: clientId, updatedAt: FieldValue.serverTimestamp(), googleSheetLastError: FieldValue.delete() };
   if (clientSecret) patch.googleClientSecretEnc = encryptSecret(clientSecret);
-  else if (!previous.googleClientSecretEnc) throw new Error("Hãy nhập Google OAuth Client Secret ở lần cấu hình đầu tiên.");
+  else if (!previous.googleClientSecretEnc || clientChanged) throw new Error("Khi đổi Google OAuth Client ID, hãy nhập Client Secret mới tương ứng.");
+  if (clientChanged) {
+    patch.googleAccessTokenEnc = FieldValue.delete();
+    patch.googleRefreshTokenEnc = FieldValue.delete();
+    patch.googleAccessTokenExpiresAtMs = 0;
+    patch.googleEmail = "";
+    patch.googleConnectedAtMs = 0;
+    patch.googleSheetAutoEnabled = false;
+  }
   await stateRef(workspace).set(patch, { merge: true });
-  return { clientIdHint: mask(clientId), secretConfigured: Boolean(clientSecret || previous.googleClientSecretEnc), redirectUri: redirectUri() };
+  return {
+    clientIdHint: mask(clientId),
+    projectNumber: googleClientProjectNumber(clientId),
+    secretConfigured: Boolean(clientSecret || (!clientChanged && previous.googleClientSecretEnc)),
+    reconnectRequired: clientChanged,
+    redirectUri: redirectUri(),
+  };
 }
 async function clientConfig(workspace) {
   const state = await getState(workspace);
-  const clientId = String(state.googleClientId || "").trim();
+  const env = envGoogleCredentials();
+  if (env) {
+    const clientId = assertUsableGoogleClientId(env.clientId);
+    return { state, clientId, clientSecret: env.clientSecret, credentialSource: "env" };
+  }
+  const clientId = assertUsableGoogleClientId(state.googleClientId || "");
   const clientSecret = state.googleClientSecretEnc ? decryptSecret(state.googleClientSecretEnc) : "";
-  if (!clientId || !clientSecret) throw new Error("Chưa cấu hình Google OAuth Client ID/Secret.");
-  return { state, clientId, clientSecret };
+  if (!clientSecret) throw new Error("Chưa cấu hình Google OAuth Client Secret.");
+  return { state, clientId, clientSecret, credentialSource: "database" };
 }
 async function createAuthUrl(workspace, returnUrl = "/?section=google") {
   const { clientId } = await clientConfig(workspace);
@@ -412,6 +462,21 @@ async function disconnect(workspace) {
   await stateRef(workspace).set({ googleAccessTokenEnc: FieldValue.delete(), googleRefreshTokenEnc: FieldValue.delete(), googleAccessTokenExpiresAtMs: 0, googleEmail: "", googleConnectedAtMs: 0, googleSheetAutoEnabled: false, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return { disconnected: true };
 }
+async function resetCredentials(workspace) {
+  await stateRef(workspace).set({
+    googleClientId: FieldValue.delete(),
+    googleClientSecretEnc: FieldValue.delete(),
+    googleAccessTokenEnc: FieldValue.delete(),
+    googleRefreshTokenEnc: FieldValue.delete(),
+    googleAccessTokenExpiresAtMs: 0,
+    googleEmail: "",
+    googleConnectedAtMs: 0,
+    googleSheetAutoEnabled: false,
+    googleSheetLastError: FieldValue.delete(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { reset: true, redirectUri: redirectUri() };
+}
 async function testSheet(workspace) {
   const state = await getState(workspace), cfg = sheetCfg(state);
   if (!cfg.spreadsheetId) throw new Error("Chưa chọn Google Sheet.");
@@ -420,12 +485,19 @@ async function testSheet(workspace) {
 }
 async function status(workspace) {
   const state = await getState(workspace), cfg = sheetCfg(state);
-  const connected = Boolean(state.googleRefreshTokenEnc || state.googleAccessTokenEnc);
+  const env = envGoogleCredentials();
+  const effectiveClientId = String(env?.clientId || state.googleClientId || "").trim();
+  const projectNumber = googleClientProjectNumber(effectiveClientId);
+  const deletedProject = Boolean(projectNumber && deletedGoogleProjectNumbers().has(projectNumber));
+  const connected = Boolean(state.googleRefreshTokenEnc || state.googleAccessTokenEnc) && !deletedProject;
   return {
     connected,
     email: state.googleEmail || "",
-    clientConfigured: Boolean(state.googleClientId && state.googleClientSecretEnc),
-    clientIdHint: mask(state.googleClientId || ""),
+    clientConfigured: Boolean(env || (state.googleClientId && state.googleClientSecretEnc)),
+    clientIdHint: mask(effectiveClientId),
+    projectNumber,
+    deletedProject,
+    credentialSource: env ? "env" : (state.googleClientId ? "database" : "none"),
     redirectUri: redirectUri(),
     spreadsheetConfigured: Boolean(cfg.spreadsheetId),
     spreadsheetIdHint: mask(cfg.spreadsheetId),
@@ -441,7 +513,8 @@ async function status(workspace) {
 }
 
 module.exports = {
-  status, saveCredentials, createAuthUrl, exchangeCallback, disconnect,
+  status, saveCredentials, createAuthUrl, exchangeCallback, disconnect, resetCredentials,
   saveSheetSettings, testSheet, startNow, fillAll, autoSyncEventGroups,
   eventBillingDate, billingDateToHeader, extractSpreadsheetId, computeSheetTotals,
+  googleClientProjectNumber, assertUsableGoogleClientId,
 };

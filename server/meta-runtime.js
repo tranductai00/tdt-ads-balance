@@ -3666,7 +3666,7 @@ exports.metaBridge = onRequest({
       "adsCheckV6Status", "adsCheckV6Configure", "adsCheckV6Sync",
       "metaApiStatus", "metaApiConfigure", "metaApiSync",
       "metaBillingStatus", "metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "metaBillingSync",
-      "googleSheetsStatus", "googleSheetsCredentialsConfigure", "googleSheetsAuthUrl", "googleSheetsDisconnect",
+      "googleSheetsStatus", "googleSheetsCredentialsConfigure", "googleSheetsAuthUrl", "googleSheetsDisconnect", "googleSheetsCredentialsReset",
       "googleSheetsSaveSettings", "googleSheetsTest", "googleSheetsStartNow", "googleSheetsFillAll"
     ]);
     if (!metaOnlyActions.has(action)) {
@@ -4005,6 +4005,11 @@ exports.metaBridge = onRequest({
     if (action === "googleSheetsDisconnect") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
       return sendJson(res, 200, { ok: true, ...(await googleSheets.disconnect(workspace)) });
+    }
+
+    if (action === "googleSheetsCredentialsReset") {
+      await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.resetCredentials(workspace)) });
     }
 
     if (action === "googleSheetsSaveSettings") {

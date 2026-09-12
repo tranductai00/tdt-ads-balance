@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-google-sheets",
-  "version": "7.2.0",
+  "version": "7.2.2",
   "private": true,
-  "description": "T Balance v7.2.0 - Hybrid AdsCheck V6 realtime account data + Meta API billing + Google Sheets",
+  "description": "T Balance v7.2.2 - Hybrid AdsCheck V6 realtime account data + Meta API billing + Google Sheets",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"

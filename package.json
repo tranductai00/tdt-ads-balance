@@ -1,8 +1,8 @@
 {
   "name": "t-balance-vercel-meta-google-sheets",
-  "version": "7.2.1",
+  "version": "7.2.2",
   "private": true,
-  "description": "T Balance v7.2.1 - Hybrid AdsCheck V6 + Meta API with web pairing-code UI for extension",
+  "description": "T Balance v7.2.2 - Hybrid AdsCheck V6 + Meta API with web pairing-code UI for extension",
   "main": "server.js",
   "engines": {
     "node": ">=22 <25"
