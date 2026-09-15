@@ -1,3 +1,13 @@
+# v7.2.3
+
+- Fix UI trạng thái Meta API dùng nhầm timestamp legacy/AdsCheck.
+- Tách `metaLastReceivedAtMs` / `metaLastScannedAtMs` / `metaLastReason`.
+- Sửa Meta Billing pagination: bỏ giới hạn cứng 4 trang/400 activity; mặc định tối đa 50 trang.
+- Không advance cursor khi pagination chưa hoàn tất, tránh bỏ sót bill.
+- Per-account parser revision v9 để mọi TKQC đều được one-time backfill dù scan theo batch.
+- Lookback tối thiểu 7 ngày, hỗ trợ 14/30 ngày; overlap cursor tăng lên 60 phút.
+- Tích hợp AdsCheck V6 extension v7.2.1 đã sửa timestamp chẩn đoán realtime.
+
 # v7.0.2
 
 - Fix `workspace is not defined` trong `metaBridge`.

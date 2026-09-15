@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "T Balance • AdsCheck V6 Realtime Data",
-  "version": "7.2.0",
+  "version": "7.2.1",
   "description": "Lấy realtime số dư, ngưỡng, còn lại, thẻ và ngày thu từ AdsCheck V6; bill thanh toán vẫn do Meta API xử lý.",
   "permissions": [
     "storage",

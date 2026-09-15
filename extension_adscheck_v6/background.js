@@ -20,6 +20,7 @@ const DEFAULTS = {
   lastSuccessAt: 0,
   lastAttemptAt: 0,
   lastScannedAt: 0,
+  lastClientSentAt: 0,
   lastServerReceivedAt: 0,
   lastReason: "",
   syncSequence: 0,
@@ -266,6 +267,7 @@ async function syncScrapedResult(scraped, reason = "manual") {
   await setSettings({
     lastSyncAt: successAt,
     lastSuccessAt: successAt,
+    lastClientSentAt: clientSentAtMs,
     lastServerReceivedAt: Number(result.serverReceivedAtMs || successAt),
     lastResult: result,
     lastError: "",

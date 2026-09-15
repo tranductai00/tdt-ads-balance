@@ -1102,7 +1102,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
             <div class="row">
               <div class="field" style="flex:1"><label>Graph API version</label><input id="metaBillingGraphVersion" value="v26.0" /></div>
               <div class="field" style="flex:1"><label>Chu kỳ tự quét</label><select id="metaBillingSyncInterval"><option value="5">5 phút</option><option value="10" selected>10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option><option value="60">60 phút</option></select></div>
-              <div class="field" style="flex:1"><label>Dò lại lịch sử</label><select id="metaBillingLookbackDays"><option value="1">1 ngày</option><option value="2">2 ngày</option><option value="3" selected>3 ngày</option><option value="5">5 ngày</option><option value="7">7 ngày</option></select></div>
+              <div class="field" style="flex:1"><label>Dò lại lịch sử</label><select id="metaBillingLookbackDays"><option value="7" selected>7 ngày</option><option value="14">14 ngày</option><option value="30">30 ngày</option></select></div>
             </div>
           </div>
           <div class="setting-box">
@@ -2392,7 +2392,7 @@ function renderMetaBillingStatus() {
   if (el("metaBillingPendingErrors")) el("metaBillingPendingErrors").textContent = `${Number(status.pending || 0)} / ${Number(status.parseErrors || 0)}`;
   if (el("metaBillingGraphVersion")) el("metaBillingGraphVersion").value = status.graphVersion || el("metaBillingGraphVersion").value || "v26.0";
   if (el("metaBillingSyncInterval")) el("metaBillingSyncInterval").value = String(status.syncIntervalMinutes || 10);
-  if (el("metaBillingLookbackDays")) el("metaBillingLookbackDays").value = String(status.lookbackDays || 3);
+  if (el("metaBillingLookbackDays")) el("metaBillingLookbackDays").value = String(status.lookbackDays || 7);
   if (el("metaBillingEnabled")) el("metaBillingEnabled").checked = status.enabled !== false;
   if (el("metaBillingAutoSync")) el("metaBillingAutoSync").checked = status.autoSync !== false;
   if (el("metaBillingAutoDeduct")) el("metaBillingAutoDeduct").checked = status.autoDeduct !== false;
@@ -2461,7 +2461,7 @@ function metaBillingConfigFromUi() {
     autoDeduct: el("metaBillingAutoDeduct")?.checked !== false,
     onlyVndAutoDeduct: el("metaBillingOnlyVnd")?.checked !== false,
     syncIntervalMinutes: Number(el("metaBillingSyncInterval")?.value || 10),
-    lookbackDays: Number(el("metaBillingLookbackDays")?.value || 3),
+    lookbackDays: Number(el("metaBillingLookbackDays")?.value || 7),
     selectionMode: el("metaBillingSelectionMode")?.value === "selected" ? "selected" : "all",
     selectedAccountIds: [...metaBillingDraftSelectedIds],
   };

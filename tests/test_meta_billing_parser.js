@@ -82,8 +82,10 @@ assert.equal(hooks.shouldRetryMetaBillingEvent({ processed: true, status: "parse
 
 const cfg = hooks.normalizeMetaBillingConfig({ metaBillingSyncIntervalMinutes: 1, metaBillingLookbackDays: 99, metaBillingMaxAccountsPerRun: 500 });
 assert.equal(cfg.syncIntervalMinutes, 5);
-assert.equal(cfg.lookbackDays, 7);
+assert.equal(cfg.lookbackDays, 30);
 assert.equal(cfg.maxAccountsPerRun, 100);
+assert.equal(hooks.normalizeMetaBillingConfig({}).lookbackDays, 7);
+assert.equal(hooks.normalizeMetaBillingConfig({ metaBillingLookbackDays: 1 }).lookbackDays, 7);
 
 
 // Key rotation/backward-compatibility: dữ liệu mã hóa bằng OUTLOOK_TOKEN_KEY cũ
@@ -185,9 +187,14 @@ assert.ok(fbtExact.downloadInvoiceLink.includes("txid=28526254503727057-28472574
 
 const lookback = 1_000_000;
 const cursor = 9_000_000;
-assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "manual", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), lookback);
-assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 7 }), lookback);
-assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), cursor - 20*60*1000);
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "manual", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 9 }), lookback);
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 8 }), lookback);
+assert.equal(hooks.resolveMetaBillingSinceMs({ reason: "auto", lookbackFloor: lookback, cursorMs: cursor, parserRevision: 9 }), cursor - 60*60*1000);
+
+const secTs = 1_700_000_000;
+assert.equal(hooks.metaActivityEventTimeMs({ event_time: String(secTs) }), secTs * 1000);
+assert.equal(hooks.metaActivityEventTimeMs({ event_time: String(secTs * 1000) }), secTs * 1000);
+assert.equal(hooks.metaActivityEventTimeMs({ date_time_in_timezone: "2026-09-15T09:06:34+07:00" }), Date.parse("2026-09-15T09:06:34+07:00"));
 
 console.log("PASS Meta Billing v6.1.8 FBT-compatible parser + backfill");
 

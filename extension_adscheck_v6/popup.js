@@ -55,8 +55,12 @@ function renderSyncTime(local, server) {
   const detail = $("syncDetail");
   if (detail) {
     const parts = [];
-    if (server?.lastScannedAtMs) parts.push(`AdsCheck quét ${fmtExact(server.lastScannedAtMs)}`);
-    if (server?.lastReceivedAtMs) parts.push(`Server nhận ${fmtExact(server.lastReceivedAtMs)}`);
+    const scannedAtMs = Number(server?.lastScannedAtMs || local?.lastScannedAt || 0);
+    const sentAtMs = Number(local?.lastClientSentAt || 0);
+    const receivedAtMs = Number(server?.lastReceivedAtMs || local?.lastServerReceivedAt || 0);
+    if (scannedAtMs) parts.push(`AdsCheck quét ${fmtExact(scannedAtMs)}`);
+    if (sentAtMs) parts.push(`Extension gửi ${fmtExact(sentAtMs)}`);
+    if (receivedAtMs) parts.push(`Server nhận ${fmtExact(receivedAtMs)}`);
     if (server?.lastReason) parts.push(`Lý do: ${server.lastReason}`);
     if (local?.lastError) parts.push(`Lỗi gần nhất: ${local.lastError}`);
     detail.textContent = parts.join(" · ") || "Dữ liệu sẽ tự gửi khi bảng AdsCheck sẵn sàng.";

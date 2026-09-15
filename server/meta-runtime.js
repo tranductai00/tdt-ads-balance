@@ -1516,7 +1516,7 @@ async function enrichMetaAccountsWithBillingInfo(accounts, accessToken, graphVer
       let account = list[index];
       try { account = await fetchMetaAdAccountDetails(account, accessToken, graphVersion); } catch {}
       try {
-        const activities = await fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, Date.now() - 90 * 24 * 60 * 60 * 1000);
+        const activities = await fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, Date.now() - 90 * 24 * 60 * 60 * 1000, { maxPages: 4 });
         const profile = deriveMetaBillingProfile(account, activities);
         account = { ...account, ...profile };
       } catch {}
@@ -1607,12 +1607,20 @@ async function runMetaApiSync(workspace, state, reason = "manual", deviceName = 
       throw error;
     }
     const result = await syncMetaAccountsToWorkspace(workspace, fetched.accounts, reason, deviceName);
+    const syncedAtMs = Date.now();
+    const metaScannedAtMs = Math.max(
+      0,
+      ...fetched.accounts.map((item) => Number(item?.scannedAt || 0)).filter(Number.isFinite),
+    ) || syncedAtMs;
     await db.collection(META_STATES).doc(workspace).set({
       metaLastApiAt: FieldValue.serverTimestamp(),
-      metaLastApiAtMs: Date.now(),
+      metaLastApiAtMs: syncedAtMs,
       metaLastSyncAt: FieldValue.serverTimestamp(),
-      metaLastSyncAtMs: Date.now(),
-      metaLastSuccessAtMs: Date.now(),
+      metaLastSyncAtMs: syncedAtMs,
+      metaLastSuccessAtMs: syncedAtMs,
+      metaLastReceivedAtMs: syncedAtMs,
+      metaLastScannedAtMs: metaScannedAtMs,
+      metaLastReason: String(reason || "manual").slice(0, 60),
       metaLastError: "",
       metaFundingDetailsAvailable: fetched.fundingDetailsAvailable,
       metaGraphVersion: fetched.graphVersion,
@@ -1659,7 +1667,7 @@ function normalizeMetaBillingConfig(state = {}) {
     autoSync: state.metaBillingAutoSync !== false,
     autoDeduct: state.metaBillingAutoDeduct !== false,
     onlyVndAutoDeduct: state.metaBillingOnlyVndAutoDeduct !== false,
-    lookbackDays: Math.max(1, Math.min(7, Number(state.metaBillingLookbackDays || 3))),
+    lookbackDays: Math.max(7, Math.min(30, Number(state.metaBillingLookbackDays || 7))),
     syncIntervalMinutes: Math.max(5, Math.min(1440, Number(state.metaBillingSyncIntervalMinutes || 10))),
     maxAccountsPerRun: Math.max(5, Math.min(100, Number(state.metaBillingMaxAccountsPerRun || 50))),
     selectionMode: state.metaBillingSelectionMode === "selected" ? "selected" : "all",
@@ -1996,14 +2004,22 @@ function extractMetaBillingAmount(extraData, currency, activity = {}) {
   };
 }
 
+function metaActivityEventTimeMs(activity) {
+  const eventTimeRaw = activity?.event_time || activity?.date_time_in_timezone || "";
+  if (/^\d+$/.test(String(eventTimeRaw || ""))) {
+    const numeric = Number(eventTimeRaw);
+    if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+    return numeric * (String(eventTimeRaw).length <= 10 ? 1000 : 1);
+  }
+  const parsed = Date.parse(String(eventTimeRaw || ""));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 function normalizeMetaBillingActivity(account, activity) {
   const extraData = safeJsonParse(activity?.extra_data);
   const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
   const eventType = String(activity?.event_type || "").trim();
-  const eventTimeRaw = activity?.event_time || activity?.date_time_in_timezone || "";
-  const eventTimeMs = /^\d+$/.test(String(eventTimeRaw || ""))
-    ? Number(eventTimeRaw) * (String(eventTimeRaw).length <= 10 ? 1000 : 1)
-    : (Date.parse(String(eventTimeRaw || "")) || Date.now());
+  const eventTimeMs = metaActivityEventTimeMs(activity) || Date.now();
   const currency = extractMetaBillingCurrency(extraData, account?.currency || "");
   const amountInfo = extractMetaBillingAmount(extraData, currency, activity);
   const txId = extractMetaBillingTextField(extraData, [/(?:transaction|payment|charge|invoice|receipt).*(?:id|number|ref)/i, /(?:fatura|invoice_id|transaction_id|payment_id|charge_id)/i]);
@@ -2221,10 +2237,12 @@ function applyMetaBillingThresholdEstimate(event, recoveryContext) {
   return true;
 }
 
-async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs) {
+async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs, options = {}) {
   const version = normalizeMetaGraphVersion(graphVersion);
   const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
   if (!accountId) return [];
+  const requestedMaxPages = Number(options.maxPages || process.env.META_BILLING_MAX_ACTIVITY_PAGES || 50);
+  const maxPages = Math.max(4, Math.min(100, Number.isFinite(requestedMaxPages) ? requestedMaxPages : 50));
   const makeUrl = (withSince = true) => {
     const url = new URL(`${META_GRAPH_BASE}/${version}/act_${accountId}/activities`);
     url.searchParams.set("fields", "actor_name,date_time_in_timezone,event_time,event_type,extra_data,object_id,object_name,object_type,translated_event_type");
@@ -2237,9 +2255,23 @@ async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphV
     const output = [];
     let next = startUrl.toString();
     let pages = 0;
-    while (next && pages < 4 && output.length < 400) {
+    let rawActivitiesScanned = 0;
+    let oldestSeenMs = 0;
+    let reachedSinceBoundary = false;
+    while (next && pages < maxPages) {
       const payload = await metaGraphFetch(next, accessToken, { maxAttempts: 2 });
-      for (const activity of Array.isArray(payload?.data) ? payload.data : []) {
+      const rows = Array.isArray(payload?.data) ? payload.data : [];
+      let pageNewestMs = 0;
+      let pageHasUnknownTime = false;
+      for (const activity of rows) {
+        rawActivitiesScanned += 1;
+        const rawEventTimeMs = metaActivityEventTimeMs(activity);
+        if (rawEventTimeMs) {
+          if (!oldestSeenMs || rawEventTimeMs < oldestSeenMs) oldestSeenMs = rawEventTimeMs;
+          if (rawEventTimeMs > pageNewestMs) pageNewestMs = rawEventTimeMs;
+        } else {
+          pageHasUnknownTime = true;
+        }
         const normalized = normalizeMetaBillingActivity(account, activity);
         if (!normalized.isBillingEvent) continue;
         if (sinceMs && normalized.eventTimeMs < sinceMs) continue;
@@ -2247,7 +2279,24 @@ async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphV
       }
       next = payload?.paging?.next || "";
       pages += 1;
+
+      // Một số Graph version/tài khoản không nhận `since`. Khi fallback sang
+      // toàn bộ activity, chỉ dừng nếu cả trang đã nằm ngoài cửa sổ cần quét.
+      if (sinceMs && rows.length && !pageHasUnknownTime && pageNewestMs && pageNewestMs <= sinceMs) {
+        reachedSinceBoundary = true;
+        next = "";
+      }
     }
+    Object.defineProperty(output, "_fetchMeta", {
+      value: {
+        complete: !next || reachedSinceBoundary,
+        pages,
+        rawActivitiesScanned,
+        oldestSeenMs,
+        maxPages,
+      },
+      enumerable: false,
+    });
     return output;
   }
 
@@ -2456,9 +2505,10 @@ function shouldRetryMetaBillingEvent(existingData = {}, event = {}) {
 function resolveMetaBillingSinceMs({ reason = "auto", lookbackFloor = 0, cursorMs = 0, parserRevision = 0 } = {}) {
   // Manual sync is also a repair/backfill operation: always reload the configured lookback window.
   // On parser upgrades, force one automatic backfill so old parse_error events are actually fetched again.
-  const forceBackfill = reason === "manual" || reason === "repair" || Number(parserRevision || 0) < 8;
+  const forceBackfill = reason === "manual" || reason === "repair" || Number(parserRevision || 0) < 9;
   if (forceBackfill) return Number(lookbackFloor || 0);
-  return Math.max(Number(lookbackFloor || 0), Number(cursorMs || 0) ? Number(cursorMs) - 20 * 60 * 1000 : 0);
+  // Giữ overlap 60 phút để bắt activity Meta đến trễ; eventId giúp de-dupe an toàn.
+  return Math.max(Number(lookbackFloor || 0), Number(cursorMs || 0) ? Number(cursorMs) - 60 * 60 * 1000 : 0);
 }
 
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
@@ -2481,6 +2531,10 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
   const previousEventMs = Number(state.metaBillingLastEventTimeMs || 0);
   const accountCursors = state.metaBillingAccountCursors && typeof state.metaBillingAccountCursors === "object"
     ? { ...state.metaBillingAccountCursors } : {};
+  // Parser revision theo từng TKQC: tránh trường hợp workspace có > maxAccountsPerRun,
+  // batch đầu nâng revision chung khiến các batch sau không được backfill.
+  const accountParserRevisions = state.metaBillingAccountParserRevisions && typeof state.metaBillingAccountParserRevisions === "object"
+    ? { ...state.metaBillingAccountParserRevisions } : {};
 
   try {
     const accountResult = await fetchMetaAdAccounts(accessToken, graphVersion);
@@ -2527,15 +2581,30 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       const results = await Promise.all(chunk.map(async (account) => {
         const accountId = normalizeAccountId(account.accountId);
         const cursorMs = Number(accountCursors[accountId] || 0);
+        const accountParserRevision = Number(accountParserRevisions[accountId] || 0);
+        // Một lần recovery tối thiểu 7 ngày cho từng TKQC sau khi nâng parser lên v9.
+        // normalizeMetaBillingConfig cũng giữ lookback >= 7 ngày cho manual repair.
+        const accountLookbackFloor = accountParserRevision < 9
+          ? Math.min(lookbackFloor, now - 7 * 24 * 60 * 60 * 1000)
+          : lookbackFloor;
         const sinceMs = resolveMetaBillingSinceMs({
           reason,
-          lookbackFloor,
+          lookbackFloor: accountLookbackFloor,
           cursorMs,
-          parserRevision: Number(state.metaBillingParserRevision || 0),
+          parserRevision: accountParserRevision,
         });
         try {
           const events = await fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs);
-          accountCursors[accountId] = now;
+          const fetchMeta = events?._fetchMeta || {};
+          if (fetchMeta.complete !== false) {
+            accountCursors[accountId] = now;
+            accountParserRevisions[accountId] = 9;
+          } else {
+            errors.push({
+              accountId: account.accountId,
+              error: `Meta activities chưa quét hết (${Number(fetchMeta.pages || 0)}/${Number(fetchMeta.maxPages || 0)} trang, ${Number(fetchMeta.rawActivitiesScanned || 0)} activity). Giữ nguyên cursor để không bỏ sót bill.`,
+            });
+          }
           return events;
         } catch (error) {
           errors.push({ accountId: account.accountId, error: String(error?.message || error).slice(0, 240) });
@@ -2673,6 +2742,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       googleSheetSync = { enabled: true, written: 0, errors: [{ error: sheetError?.message || String(sheetError) }] };
     }
 
+    const fullySuccessful = errors.length === 0;
     const patch = {
       metaBillingEnabled: config.enabled,
       metaBillingAutoSync: config.autoSync,
@@ -2683,7 +2753,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingLastAttemptAtMs: now,
       metaBillingLastSyncAt: FieldValue.serverTimestamp(),
       metaBillingLastSyncAtMs: Date.now(),
-      metaBillingLastSuccessAtMs: Date.now(),
+      metaBillingLastSuccessAtMs: fullySuccessful ? Date.now() : Number(state.metaBillingLastSuccessAtMs || 0),
       metaBillingLastEventTimeMs: lastEventTimeMs,
       metaBillingScannedAccounts: accounts.length,
       metaBillingTotalAccounts: totalAccounts,
@@ -2694,7 +2764,8 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingSelectedAccountCount: config.selectionMode === "selected" ? allAccounts.length : discoveredAccounts.length,
       metaBillingScanCursor: nextScanCursor,
       metaBillingAccountCursors: accountCursors,
-      metaBillingParserRevision: 8,
+      metaBillingAccountParserRevisions: accountParserRevisions,
+      metaBillingParserRevision: 9,
       metaBillingAccountSnapshots: nextAccountSnapshots,
       metaBillingEventsFound: allEvents.length,
       metaBillingNewBills: newBills,
@@ -2706,7 +2777,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       metaBillingParseErrors: parseErrors,
       metaBillingDuplicates: duplicates,
       metaBillingRecognized: recognized,
-      metaBillingLastError: "",
+      metaBillingLastError: fullySuccessful ? "" : `${errors.length} TKQC quét billing chưa hoàn tất. Cursor được giữ nguyên để tự thử lại.`,
       metaBillingAccountErrors: errors.slice(0, 20),
       metaBillingReason: String(reason || "manual").slice(0, 60),
       updatedAt: FieldValue.serverTimestamp(),
@@ -4128,9 +4199,9 @@ exports.metaBridge = onRequest({
         lastSyncAtMs,
         lastSuccessAtMs: Number(state.metaLastSuccessAtMs || state.metaLastSyncAtMs || state.lastSuccessAtMs || state.lastSyncAtMs || 0),
         lastAttemptAtMs: Number(state.metaLastAttemptAtMs || state.lastAttemptAtMs || 0),
-        lastReceivedAtMs: Number(state.metaLastSyncAtMs || state.lastReceivedAtMs || state.lastSyncAtMs || 0),
-        lastScannedAtMs: Number(state.lastScannedAtMs || 0),
-        lastReason: state.lastReason || "",
+        lastReceivedAtMs: Number(state.metaLastReceivedAtMs || state.metaLastSyncAtMs || state.metaLastApiAtMs || 0),
+        lastScannedAtMs: Number(state.metaLastScannedAtMs || state.metaLastApiAtMs || state.metaLastSyncAtMs || 0),
+        lastReason: state.metaLastReason || "",
         lastError: state.metaLastError || "",
         reconnectRequired: !!state.metaReconnectRequired,
         sourceUrl: state.sourceUrl || "",
@@ -4262,7 +4333,7 @@ exports.metaBridge = onRequest({
         metaBillingAutoSync: body.autoSync !== false,
         metaBillingAutoDeduct: body.autoDeduct !== false,
         metaBillingOnlyVndAutoDeduct: body.onlyVndAutoDeduct !== false,
-        metaBillingLookbackDays: Math.max(1, Math.min(7, Number(body.lookbackDays || previous.metaBillingLookbackDays || 3))),
+        metaBillingLookbackDays: Math.max(7, Math.min(30, Number(body.lookbackDays || previous.metaBillingLookbackDays || 7))),
         metaBillingSyncIntervalMinutes: Math.max(5, Math.min(1440, Number(body.syncIntervalMinutes || previous.metaBillingSyncIntervalMinutes || 10))),
         metaBillingMaxAccountsPerRun: Math.max(5, Math.min(100, Number(body.maxAccountsPerRun || previous.metaBillingMaxAccountsPerRun || 50))),
         metaBillingSelectionMode: body.selectionMode === "selected" ? "selected" : "all",
@@ -4379,7 +4450,7 @@ exports.metaBridge = onRequest({
       await db.collection(META_STATES).doc(workspace).set({ metaBillingAvailableAccounts: availableAccounts, metaBillingDiscoveredAccounts: availableAccounts.length, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       let billingActivityCount = 0;
       if (first) {
-        const activities = await fetchMetaBillingActivitiesForAccount(first, token, graphVersion, Date.now() - 24 * 60 * 60 * 1000);
+        const activities = await fetchMetaBillingActivitiesForAccount(first, token, graphVersion, Date.now() - 24 * 60 * 60 * 1000, { maxPages: 10 });
         billingActivityCount = activities.length;
       }
       return sendJson(res, 200, {
@@ -4545,6 +4616,7 @@ async function checkWorkspaceBalanceChanges(workspace, workspaceData) {
 if (process.env.NODE_ENV === "test") {
   exports.__metaBillingTestHooks = {
     normalizeMetaBillingActivity,
+    metaActivityEventTimeMs,
     extractMetaBillingAmount,
     extractFacebookBillingToolAmount,
     extractMetaBillingCurrency,

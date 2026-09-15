@@ -1,0 +1,17 @@
+LỖI THIẾU BILL META - BACKEND FIX REQUIRED
+
+Gói extension này chỉ đồng bộ AdsCheck V6 realtime.
+Bill thanh toán được backend lấy trực tiếp từ Meta Graph API.
+
+Để sửa dứt điểm lỗi bill bị thiếu và timestamp Meta API cũ, cần cập nhật repo backend tdt-ads-balance:
+- server/meta-runtime.js
+- public/index.html
+- tests/test_meta_billing_parser.js
+
+Các điểm cần sửa:
+1. metaApiStatus không dùng state.lastScannedAtMs legacy cho Meta API.
+2. Pagination /activities không được dừng cứng ở 4 trang rồi advance cursor.
+3. Không advance account cursor khi scan bị truncate.
+4. Backfill tối thiểu 7 ngày; hỗ trợ 14/30 ngày.
+5. Tăng overlap cursor từ 20 phút lên 60 phút.
+6. Recovery/backfill theo từng ad account để không bỏ sót khi maxAccountsPerRun chia batch.
