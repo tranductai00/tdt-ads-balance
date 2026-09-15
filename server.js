@@ -101,7 +101,7 @@ app.get("/healthz", async (_req, res) => {
   const ok = database.ok === true;
   res.status(ok ? 200 : 503).json({
     ok,
-    service: "T Balance v7.2.3 Meta + Google Sheets",
+    service: "T Balance v7.2.4 Meta + Google Sheets",
     startedAt: STARTED_AT,
     node: process.version,
     storage: "postgresql",

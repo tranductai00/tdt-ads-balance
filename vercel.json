@@ -29,6 +29,9 @@
     },
     "api/googleOAuthCallback.js": {
       "maxDuration": 60
+    },
+    "api/outlookBridge.js": {
+      "maxDuration": 300
     }
   }
 }

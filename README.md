@@ -1,4 +1,4 @@
-# T Balance v7.2.3 — Fix Meta Billing thiếu bill + timestamp
+# T Balance v7.2.4 — Fix timeout Bridge + chống đồng bộ Meta Billing trùng
 
 ## Kiến trúc nguồn dữ liệu
 
@@ -6,6 +6,17 @@
 - **Meta Graph API**: nguồn duy nhất cho billing events, payment amount, transaction ID, PDF bill, tự trừ ngân hàng và Google Sheets.
 
 Extension không tạo transaction bill và không gọi logic tự trừ.
+
+
+## Fix chính v7.2.4
+
+- Sửa lỗi giao diện tự `AbortController.abort()` sau **22 giây** trong khi một request Meta Graph riêng lẻ có thể chờ tới **25 giây**.
+- `metaBillingSync` được chờ tối đa **250 giây** ở trình duyệt và **không tự retry** để tránh tạo nhiều job billing chạy song song.
+- Các action nặng khác dùng timeout theo loại tác vụ thay vì một mốc 22 giây cho tất cả.
+- `metaBridge` runtime nâng giới hạn lên **240 giây**; Vercel Function giữ `maxDuration: 300`.
+- Thêm **server-side sync lease 6 phút**: chỉ một Meta Billing sync được chạy trên mỗi workspace tại một thời điểm.
+- `metaBillingStatus` trả thêm `syncInProgress`, thời gian bắt đầu và lease; nút **Lấy bill ngay** tự khóa khi server đang quét.
+- Giữ nguyên toàn bộ fix v7.2.3: timestamp Meta API, pagination billing, cursor safety, backfill 7/14/30 ngày và recovery bill bị thiếu.
 
 ## Fix chính v7.2.3
 

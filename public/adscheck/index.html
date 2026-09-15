@@ -2651,16 +2651,25 @@ function renderMetaBillingStatus() {
   if (!metaBillingSelectionDirty && Array.isArray(status.selectedAccountIds)) metaBillingDraftSelectedIds = new Set(status.selectedAccountIds.map(String));
   renderMetaBillingAccountPicker();
 
+  const syncButton = el("btnMetaBillingSync");
+  if (syncButton && !metaBillingSyncInFlight) {
+    syncButton.disabled = !!status.syncInProgress;
+    syncButton.textContent = status.syncInProgress ? "Đang đồng bộ…" : "Lấy bill ngay";
+  }
+
   const statusNode = el("metaBillingStatusText");
   if (statusNode) {
     const user = status.metaUserName ? ` · ${status.metaUserName}` : "";
     const due = status.due ? " · đang đến hạn quét" : "";
+    const runningSince = status.syncStartedAtMs ? ` từ ${formatAdsCheckDate(status.syncStartedAtMs)}` : "";
     statusNode.textContent = !status.connected
       ? "Chưa cấu hình Meta Access Token."
-      : status.lastError
-        ? `Meta API${user}: ${status.lastError}`
-        : `Meta API${user} đã sẵn sàng${due}. Lần gần nhất quét ${Number(status.scannedAccounts || 0)}/${Number(status.totalAccounts || status.scannedAccounts || 0)} TKQC${status.selectionMode === "selected" ? ` (đã chọn ${Number(status.selectedAccountCount || status.selectedAccountIds?.length || 0)})` : ""} · ${Number(status.eventsFound || 0)} billing event.`;
-    statusNode.style.color = status.lastError ? "var(--bad)" : status.connected ? "var(--ok)" : "var(--warn)";
+      : status.syncInProgress
+        ? `Meta API${user} đang đồng bộ billing${runningSince}. Hệ thống khóa lệnh trùng cho đến khi lần quét này hoàn tất.`
+        : status.lastError
+          ? `Meta API${user}: ${status.lastError}`
+          : `Meta API${user} đã sẵn sàng${due}. Lần gần nhất quét ${Number(status.scannedAccounts || 0)}/${Number(status.totalAccounts || status.scannedAccounts || 0)} TKQC${status.selectionMode === "selected" ? ` (đã chọn ${Number(status.selectedAccountCount || status.selectedAccountIds?.length || 0)})` : ""} · ${Number(status.eventsFound || 0)} billing event.`;
+    statusNode.style.color = status.syncInProgress ? "var(--warn)" : status.lastError ? "var(--bad)" : status.connected ? "var(--ok)" : "var(--warn)";
   }
 
   const list = el("metaBillingRecentList");
@@ -2861,9 +2870,18 @@ function renderOutlookStatus() {
   });
 }
 
+function outlookBridgeRequestPolicy(action) {
+  const name = String(action || "");
+  if (name === "metaBillingSync") return { timeoutMs: 250000, maxAttempts: 1 };
+  if (["metaApiSync", "googleSheetsFillAll", "googleSheetsStartNow"].includes(name)) return { timeoutMs: 180000, maxAttempts: 1 };
+  if (["metaBillingConfigure", "metaBillingAccounts", "metaBillingTest", "googleSheetsTest"].includes(name)) return { timeoutMs: 90000, maxAttempts: 2 };
+  return { timeoutMs: 45000, maxAttempts: 3 };
+}
+
 async function callOutlookBridge(action, payload={}) {
   const cfg = ensureCloudSyncKey();
   const requestId = `web-${Date.now()}-${++bridgeRequestSequence}`;
+  const policy = outlookBridgeRequestPolicy(action);
   const body = JSON.stringify({
     action,
     workspace: workspaceId,
@@ -2875,9 +2893,9 @@ async function callOutlookBridge(action, payload={}) {
     ...payload
   });
   let lastError = null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < policy.maxAttempts; attempt += 1) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 22000);
+    const timer = setTimeout(() => controller.abort(), policy.timeoutMs);
     try {
       const response = await fetch(`${cfg.functionBase}/api/outlookBridge`, {
         method: "POST",
@@ -2891,12 +2909,21 @@ async function callOutlookBridge(action, payload={}) {
         const error = new Error(result.error || `Outlook Bridge HTTP ${response.status}`);
         error.code = result.code || "OUTLOOK_BRIDGE_ERROR";
         error.status = response.status;
-        if (response.status < 500 || attempt === 2) throw error;
+        if (response.status < 500 || attempt === policy.maxAttempts - 1) throw error;
         lastError = error;
       } else return result;
     } catch (error) {
-      lastError = error?.name === "AbortError" ? new Error("Máy chủ phản hồi quá lâu. Hệ thống sẽ tự thử lại.") : error;
-      if (isDeviceAuthError(lastError) || Number(lastError?.status || 0) < 500 && Number(lastError?.status || 0) >= 400 || attempt === 2) throw lastError;
+      if (error?.name === "AbortError") {
+        const seconds = Math.round(policy.timeoutMs / 1000);
+        lastError = new Error(policy.maxAttempts === 1
+          ? `Máy chủ vẫn đang xử lý sau ${seconds} giây. Không tự gửi lại lệnh để tránh chạy đồng bộ trùng. Hãy làm mới trạng thái trước khi thử lại.`
+          : `Máy chủ chưa phản hồi sau ${seconds} giây. Hệ thống sẽ tự thử lại.`);
+        lastError.code = "BRIDGE_TIMEOUT";
+        lastError.status = 0;
+      } else {
+        lastError = error;
+      }
+      if (isDeviceAuthError(lastError) || (Number(lastError?.status || 0) >= 400 && Number(lastError?.status || 0) < 500) || attempt === policy.maxAttempts - 1) throw lastError;
     } finally {
       clearTimeout(timer);
     }

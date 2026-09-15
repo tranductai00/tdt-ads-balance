@@ -2511,6 +2511,88 @@ function resolveMetaBillingSinceMs({ reason = "auto", lookbackFloor = 0, cursorM
   return Math.max(Number(lookbackFloor || 0), Number(cursorMs || 0) ? Number(cursorMs) - 60 * 60 * 1000 : 0);
 }
 
+const META_BILLING_SYNC_LEASE_MS = 6 * 60 * 1000;
+
+async function acquireMetaBillingSyncLease(workspace, { requestId = "", deviceName = "", reason = "" } = {}) {
+  const stateRef = db.collection(META_STATES).doc(workspace);
+  const now = Date.now();
+  const owner = sha256(`${workspace}:${String(requestId || crypto.randomBytes(12).toString("hex"))}`).slice(0, 32);
+  let active = null;
+  const acquired = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(stateRef);
+    const state = snap.exists ? (snap.data() || {}) : {};
+    const leaseUntilMs = Number(state.metaBillingSyncLeaseUntilMs || 0);
+    if (leaseUntilMs > now) {
+      active = {
+        leaseUntilMs,
+        startedAtMs: Number(state.metaBillingSyncStartedAtMs || 0),
+        deviceName: String(state.metaBillingSyncDeviceName || ""),
+        requestId: String(state.metaBillingSyncRequestId || ""),
+      };
+      return false;
+    }
+    tx.set(stateRef, {
+      metaBillingSyncLeaseOwner: owner,
+      metaBillingSyncLeaseUntilMs: now + META_BILLING_SYNC_LEASE_MS,
+      metaBillingSyncStartedAtMs: now,
+      metaBillingSyncDeviceName: String(deviceName || "Meta Billing API").slice(0, 80),
+      metaBillingSyncReason: String(reason || "manual").slice(0, 60),
+      metaBillingSyncRequestId: String(requestId || "").slice(0, 120),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return true;
+  });
+  return { acquired, owner, stateRef, active };
+}
+
+async function releaseMetaBillingSyncLease(lease) {
+  if (!lease?.acquired || !lease?.stateRef || !lease?.owner) return;
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(lease.stateRef);
+      const state = snap.exists ? (snap.data() || {}) : {};
+      if (String(state.metaBillingSyncLeaseOwner || "") !== String(lease.owner)) return;
+      tx.set(lease.stateRef, {
+        metaBillingSyncLeaseOwner: "",
+        metaBillingSyncLeaseUntilMs: 0,
+        metaBillingSyncFinishedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+  } catch (error) {
+    // Lease tự hết hạn; không làm fail một lần sync đã hoàn tất chỉ vì bước unlock lỗi.
+    console.warn("Không release được Meta Billing sync lease:", error?.message || error);
+  }
+}
+
+async function runMetaBillingSyncWithLease(workspace, state, reason = "manual", deviceName = "Meta Billing API", options = {}) {
+  const lease = await acquireMetaBillingSyncLease(workspace, {
+    requestId: options.requestId,
+    deviceName,
+    reason,
+  });
+  if (!lease.acquired) {
+    if (options.throwIfBusy === false) {
+      return {
+        skipped: true,
+        reason: "already_running",
+        syncStartedAtMs: Number(lease.active?.startedAtMs || 0),
+        syncLeaseUntilMs: Number(lease.active?.leaseUntilMs || 0),
+      };
+    }
+    const error = new Error("Meta Billing đang được đồng bộ bởi một yêu cầu khác. Không gửi thêm lệnh trùng; hãy chờ lần đang chạy hoàn tất rồi làm mới trạng thái.");
+    error.status = 409;
+    error.code = "META_BILLING_SYNC_IN_PROGRESS";
+    error.syncStartedAtMs = Number(lease.active?.startedAtMs || 0);
+    throw error;
+  }
+  try {
+    return await runMetaBillingSync(workspace, state, reason, deviceName);
+  } finally {
+    await releaseMetaBillingSyncLease(lease);
+  }
+}
+
 async function runMetaBillingSync(workspace, state, reason = "manual", deviceName = "Meta Billing API") {
   // v7.0.3: sửa dữ liệu sai từ các bản cũ trước khi xử lý billing mới.
   await repairMetaBillingNoSourceDeductions(workspace);
@@ -3723,7 +3805,9 @@ async function recentReceipts(workspace, connection = null) {
 
 exports.metaBridge = onRequest({
   region: REGION,
-  timeoutSeconds: 120,
+  // Billing backfill can legitimately take longer than the old 22s browser timeout.
+  // Vercel is configured for 300s; 240s keeps compatibility with other runtimes.
+  timeoutSeconds: 240,
   memory: "256MiB",
 }, async (req, res) => {
   setCors(req, res);
@@ -4296,6 +4380,10 @@ exports.metaBridge = onRequest({
         graphVersion: normalizeMetaGraphVersion(state.metaGraphVersion),
         ...config,
         due,
+        syncInProgress: Number(state.metaBillingSyncLeaseUntilMs || 0) > Date.now(),
+        syncStartedAtMs: Number(state.metaBillingSyncStartedAtMs || 0),
+        syncLeaseUntilMs: Number(state.metaBillingSyncLeaseUntilMs || 0),
+        syncDeviceName: String(state.metaBillingSyncDeviceName || ""),
         lastSyncAtMs,
         lastSuccessAtMs: Number(state.metaBillingLastSuccessAtMs || 0),
         lastAttemptAtMs: Number(state.metaBillingLastAttemptAtMs || 0),
@@ -4470,7 +4558,13 @@ exports.metaBridge = onRequest({
       const stateRef = db.collection(META_STATES).doc(workspace);
       const stateSnap = await stateRef.get();
       const state = stateSnap.exists ? (stateSnap.data() || {}) : {};
-      const result = await runMetaBillingSync(workspace, state, String(body.reason || "manual"), deviceName || "T Balance Web");
+      const result = await runMetaBillingSyncWithLease(
+        workspace,
+        state,
+        String(body.reason || "manual"),
+        deviceName || "T Balance Web",
+        { requestId: String(body.requestId || ""), throwIfBusy: true },
+      );
       return sendJson(res, 200, { ok: true, ...result, recentBills: await recentMetaBillingEvents(workspace, 30) });
     }
 
@@ -4523,8 +4617,17 @@ exports.metaBillingAutoSync = onSchedule({
     const lastSyncAtMs = Number(state.metaBillingLastSyncAtMs || 0);
     if (lastSyncAtMs && Date.now() - lastSyncAtMs < config.syncIntervalMinutes * 60 * 1000) continue;
     try {
-      const result = await runMetaBillingSync(doc.id, state, "scheduler", "Meta Billing Scheduler");
-      console.log("Meta Billing API auto sync:", doc.id, {
+      const result = await runMetaBillingSyncWithLease(
+        doc.id,
+        state,
+        "scheduler",
+        "Meta Billing Scheduler",
+        { requestId: `scheduler-${Date.now()}-${doc.id}`, throwIfBusy: false },
+      );
+      console.log("Meta Billing API auto sync:", doc.id, result?.skipped ? {
+        skipped: true,
+        reason: result.reason,
+      } : {
         scannedAccounts: result.scannedAccounts,
         eventsFound: result.eventsFound,
         autoDeducted: result.autoDeducted,

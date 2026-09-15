@@ -3164,7 +3164,7 @@ async function recentReceipts(workspace, connection = null) {
 
 exports.outlookBridge = onRequest({
   region: REGION,
-  timeoutSeconds: 120,
+  timeoutSeconds: 240,
   memory: "256MiB",
   secrets: [MS_CLIENT_ID, MS_CLIENT_SECRET, OUTLOOK_TOKEN_KEY],
 }, async (req, res) => {

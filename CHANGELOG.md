@@ -1,3 +1,13 @@
+# v7.2.4
+
+- Fix lỗi `Máy chủ phản hồi quá lâu. Hệ thống sẽ tự thử lại.` do frontend abort request sau 22 giây.
+- Thêm request policy theo action: Meta Billing 250 giây / 1 attempt; tác vụ nặng khác 90–180 giây.
+- Không tự retry `metaBillingSync`, tránh chạy trùng khi request đầu vẫn tiếp tục ở server.
+- Thêm distributed lease 6 phút cho Meta Billing theo workspace; request trùng nhận `META_BILLING_SYNC_IN_PROGRESS` (409).
+- Meta Billing status hiển thị trạng thái đang quét và tự khóa nút sync trong lúc job đang chạy.
+- Nâng runtime bridge lên 240 giây và Vercel maxDuration cho `/api/metaBridge`, `/api/outlookBridge` lên 300 giây.
+- Giữ nguyên toàn bộ cơ chế phục hồi bill thiếu của v7.2.3.
+
 # v7.2.3
 
 - Fix UI trạng thái Meta API dùng nhầm timestamp legacy/AdsCheck.
