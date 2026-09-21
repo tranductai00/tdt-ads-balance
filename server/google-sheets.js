@@ -147,7 +147,13 @@ function computeSheetTotals({ current = 0, eventTotal = 0, alreadySyncedTotal = 
 
 async function getState(workspace) {
   const snap = await stateRef(workspace).get();
-  return snap.exists ? (snap.data() || {}) : {};
+  const state = snap.exists ? (snap.data() || {}) : {};
+  if (state.spreadsheetId && !state.currencyReportVersion) {
+    const migration = { currencyReportVersion: 2, legacyReportTarget: `${state.spreadsheetId}|${state.sheetName || "Chi tiết dòng tiền"}|${Number(state.googleSheetStartFromMs || 0)}` };
+    await stateRef(workspace).set(migration, { merge: true });
+    Object.assign(state, migration);
+  }
+  return state;
 }
 async function saveCredentials(workspace, input = {}) {
   const previous = await getState(workspace);
@@ -246,7 +252,7 @@ async function accessToken(workspace) {
 }
 async function googleFetch(workspace, url, options = {}) {
   const token = await accessToken(workspace);
-  const response = await fetch(url, { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` } });
+  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(25000), headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` } });
   let payload;
   const type = response.headers.get("content-type") || "";
   payload = type.includes("application/json") ? await response.json().catch(() => ({})) : await response.text().catch(() => "");
@@ -256,8 +262,23 @@ async function googleFetch(workspace, url, options = {}) {
   }
   return payload;
 }
-function sheetCfg(state) {
+function reportCurrency(value = "VND") {
+  const currency = String(value).toUpperCase();
+  if (!["USD", "VND"].includes(currency)) throw new Error("Chỉ hỗ trợ báo cáo USD hoặc VND.");
+  return currency;
+}
+function moneySum(events, currency) {
+  const scale = currency === "USD" ? 100 : 1;
+  const units = events.reduce((sum, event) => sum + Math.round(Number(event.amount) * scale), 0);
+  if (!Number.isSafeInteger(units)) throw new Error("Tổng tiền vượt giới hạn chính xác.");
+  return units / scale;
+}
+function sheetCfg(state, currency = "VND") {
+  currency = reportCurrency(currency);
+  const root = state;
+  if (currency === "USD") state = state.usdReport || {};
   return {
+    currency,
     spreadsheetId: String(state.spreadsheetId || ""),
     spreadsheetTitle: String(state.spreadsheetTitle || ""),
     sheetName: String(state.sheetName || "Chi tiết dòng tiền"),
@@ -266,9 +287,9 @@ function sheetCfg(state) {
     dateStartColumn: String(state.dateStartColumn || "G").toUpperCase(),
     dateEndColumn: String(state.dateEndColumn || "AK").toUpperCase(),
     scanMaxRow: Math.max(10, Math.min(50000, Number(state.scanMaxRow || 5000))),
-    autoEnabled: state.googleSheetAutoEnabled === true,
-    startFromMs: Number(state.googleSheetStartFromMs || 0),
-    onlyVnd: state.googleSheetOnlyVnd !== false,
+    autoEnabled: root.googleSheetAutoEnabled === true,
+    startFromMs: Number(root.googleSheetStartFromMs || 0),
+    onlyVnd: root.googleSheetOnlyVnd !== false,
     timeZone: String(state.googleSheetTimeZone || "Asia/Ho_Chi_Minh"),
   };
 }
@@ -276,7 +297,18 @@ async function spreadsheetMeta(workspace, spreadsheetId) {
   return googleFetch(workspace, `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=properties.title,sheets.properties.title`);
 }
 async function saveSheetSettings(workspace, input = {}) {
-  const id = extractSpreadsheetId(input.spreadsheetUrl || input.spreadsheetId);
+  const currency = reportCurrency(input.currency || "VND");
+  const previous = await getState(workspace);
+  const id = extractSpreadsheetId(input.spreadsheetUrl || input.spreadsheetId || sheetCfg(previous, currency).spreadsheetId);
+  for (const field of ["accountIdColumn", "dateStartColumn", "dateEndColumn"]) {
+    if (input[field] && (!/^[A-Z]{1,3}$/i.test(input[field]) || colToNum(input[field]) > 18278)) throw new Error("Cột Sheet không hợp lệ.");
+  }
+  for (const field of ["headerRow", "scanMaxRow"]) {
+    if (input[field] !== undefined && (!Number.isInteger(Number(input[field])) || Number(input[field]) < 1 || Number(input[field]) > 50000)) throw new Error("Số dòng Sheet không hợp lệ.");
+  }
+  if (colToNum(input.dateStartColumn || "G") > colToNum(input.dateEndColumn || "AK")) throw new Error("Cột ngày bắt đầu phải nằm trước cột kết thúc.");
+  const other = sheetCfg(previous, currency === "USD" ? "VND" : "USD");
+  if (other.spreadsheetId === id && other.sheetName === String(input.sheetName || "Chi tiết dòng tiền").trim()) throw new Error("USD và VND phải dùng hai tab Sheet khác nhau.");
   if (!id) throw new Error("Link hoặc Spreadsheet ID không hợp lệ.");
   const meta = await spreadsheetMeta(workspace, id);
   const names = (meta.sheets || []).map(s => s.properties?.title).filter(Boolean);
@@ -295,8 +327,8 @@ async function saveSheetSettings(workspace, input = {}) {
     googleSheetTimeZone: String(input.timeZone || "Asia/Ho_Chi_Minh"),
     updatedAt: FieldValue.serverTimestamp(),
   };
-  await stateRef(workspace).set(patch, { merge: true });
-  return { ...patch, sheets: names };
+  await stateRef(workspace).set(currency === "USD" ? { usdReport: patch } : patch, { merge: true });
+  return { ...patch, currency, sheets: names };
 }
 async function valuesGet(workspace, spreadsheetId, range, params = {}) {
   const url = new URL(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}`);
@@ -311,8 +343,8 @@ async function valuesUpdate(workspace, spreadsheetId, range, values) {
 async function valuesBatchUpdate(workspace, spreadsheetId, data) {
   return googleFetch(workspace, `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchUpdate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ valueInputOption: "RAW", data }) });
 }
-async function loadSheetIndex(workspace) {
-  const state = await getState(workspace), cfg = sheetCfg(state);
+async function loadSheetIndex(workspace, currency = "VND") {
+  const state = await getState(workspace), cfg = sheetCfg(state, currency);
   if (!cfg.spreadsheetId) throw new Error("Chưa chọn Google Sheet.");
   const sheet = cfg.sheetName.replace(/'/g, "''");
   const accountRange = `'${sheet}'!${cfg.accountIdColumn}1:${cfg.accountIdColumn}${cfg.scanMaxRow}`;
@@ -322,13 +354,14 @@ async function loadSheetIndex(workspace) {
     valuesGet(workspace, cfg.spreadsheetId, headerRange, { valueRenderOption: "FORMATTED_VALUE", dateTimeRenderOption: "FORMATTED_STRING" }),
   ]);
   const accountRows = new Map();
-  (accounts.values || []).forEach((r, i) => { const id = normalizeAccountId(r?.[0]); if (id && !accountRows.has(id)) accountRows.set(id, i + 1); });
+  (accounts.values || []).forEach((r, i) => { const id = normalizeAccountId(r?.[0]); if (id) { if (accountRows.has(id)) throw new Error(`Account ID ${id} xuất hiện nhiều dòng; hãy sửa trước khi điền.`); accountRows.set(id, i + 1); } });
   const dateColumns = new Map();
   (headers.values?.[0] || []).map(v => String(v || "").trim()).forEach((v, i) => {
     const col = numToCol(colToNum(cfg.dateStartColumn) + i);
-    dateColumns.set(v, col);
-    const m = v.match(/^(\d{1,2})[\/-](\d{1,2})/);
-    if (m) dateColumns.set(`${pad2(m[1])}/${pad2(m[2])}`, col);
+    const m = v.match(/^(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{4}))?$/);
+    const key = m ? (m[3] ? `${m[3]}-${pad2(m[2])}-${pad2(m[1])}` : `${pad2(m[1])}/${pad2(m[2])}`) : v;
+    if (key && dateColumns.has(key)) throw new Error(`Ngày ${key} xuất hiện nhiều cột.`);
+    if (key) dateColumns.set(key, col);
   });
   return { cfg, sheet, accountRows, dateColumns };
 }
@@ -337,25 +370,27 @@ function locateFromIndex(index, accountId, billingDate) {
   const row = index.accountRows.get(normalized);
   if (!row) { const e = new Error(`Không tìm thấy Account ID ${normalized} trong cột ${index.cfg.accountIdColumn}.`); e.code = "ACCOUNT_NOT_FOUND"; throw e; }
   const wanted = billingDateToHeader(billingDate);
-  const column = index.dateColumns.get(wanted);
+  const column = index.dateColumns.get(billingDate) || index.dateColumns.get(wanted);
   if (!column) { const e = new Error(`Không tìm thấy cột ngày ${wanted} trong dòng ${index.cfg.headerRow}.`); e.code = "DATE_NOT_FOUND"; throw e; }
   return { cell: `${column}${row}`, row, column, header: wanted, cfg: index.cfg };
 }
 async function eligibleEvents(workspace, accountId = "", billingDate = "", options = {}) {
-  const state = await getState(workspace), cfg = sheetCfg(state);
+  const state = await getState(workspace), cfg = sheetCfg(state, options.currency);
   const snap = await db.collection(META_BILLING_EVENTS).doc(workspace).collection("items").get();
   const startFromMs = Number(options.ignoreStart ? 0 : cfg.startFromMs || 0);
   const out = [];
   for (const doc of snap.docs) {
     const r = doc.data() || {};
-    const date = eventBillingDate(r.eventTime || Number(r.eventTimeMs || 0), cfg.timeZone);
+    const timestamp = r.eventTime || Number(r.eventTimeMs || 0);
+    if (!timestamp || !Number.isFinite(new Date(timestamp).getTime())) continue;
+    const date = eventBillingDate(timestamp, cfg.timeZone);
     const normalizedId = normalizeAccountId(r.accountId);
     const currency = String(r.currency || "").toUpperCase();
     const amount = Number(r.amount || 0);
     if (String(r.eventType || "") !== "ad_account_billing_charge") continue;
-    if (!normalizedId || !amount || amount <= 0) continue;
+    if (!normalizedId || !Number.isFinite(amount) || amount <= 0) continue;
     if (["parse_error", "failed", "estimated"].includes(String(r.status || ""))) continue;
-    if (cfg.onlyVnd && currency && currency !== "VND") continue;
+    if (currency !== cfg.currency) continue;
     if (startFromMs && Number(r.eventTimeMs || Date.parse(r.eventTime || "") || 0) < startFromMs) continue;
     if (accountId && normalizedId !== normalizeAccountId(accountId)) continue;
     if (billingDate && date !== billingDate) continue;
@@ -364,24 +399,38 @@ async function eligibleEvents(workspace, accountId = "", billingDate = "", optio
   return out;
 }
 async function syncAccountDateToSheet(workspace, accountId, billingDate, options = {}) {
-  const state = await getState(workspace), cfg = sheetCfg(state);
+  const state = await getState(workspace), cfg = sheetCfg(state, options.currency);
   if (!cfg.spreadsheetId) throw new Error("Chưa chọn Google Sheet.");
   if (!options.force && (!cfg.autoEnabled || !cfg.startFromMs)) return { skipped: true, reason: "auto_disabled" };
-  const index = options.index || await loadSheetIndex(workspace);
+  const index = options.index || await loadSheetIndex(workspace, cfg.currency);
   const location = locateFromIndex(index, accountId, billingDate);
-  const dailyRef = db.collection(SHEET_DAILY).doc(workspace).collection("items").doc(dailyId(workspace, accountId, billingDate));
-  const events = await eligibleEvents(workspace, accountId, billingDate, { ignoreStart: options.ignoreStart === true });
-  const eventTotal = events.reduce((s, r) => s + Number(r.amount || 0), 0);
-  const alreadySyncedTotal = events.filter(r => Number(r.googleSheetSyncedAtMs || 0) > 0).reduce((s, r) => s + Number(r.amount || 0), 0);
+  const destination = `${cfg.currency}|${cfg.spreadsheetId}|${cfg.sheetName}|${location.cell}|${cfg.startFromMs}`;
+  const dailyRef = db.collection(SHEET_DAILY).doc(workspace).collection("items").doc(dailyId(`${workspace}|${destination}`, accountId, billingDate));
+  const owner = crypto.randomUUID();
+  const acquired = await db.runTransaction(async tx => {
+    const snap = await tx.get(dailyRef);
+    if (Number(snap.data()?.leaseUntil || 0) > Date.now()) return false;
+    tx.set(dailyRef, { leaseOwner: owner, leaseUntil: Date.now() + 120000 }, { merge: true });
+    return true;
+  });
+  if (!acquired) throw new Error("Ô báo cáo đang được ghi bởi yêu cầu khác; hãy thử lại.");
+  try {
+  const events = await eligibleEvents(workspace, accountId, billingDate, { ignoreStart: options.ignoreStart === true, currency: cfg.currency });
+  const eventTotal = moneySum(events, cfg.currency);
+  const alreadySyncedTotal = moneySum(events.filter(r => r.googleSheetDestination === destination), cfg.currency);
   const dailySnap = await dailyRef.get();
   let daily = dailySnap.exists ? (dailySnap.data() || {}) : {};
+  if (!daily.baselineInitialized && cfg.currency === "VND" && state.legacyReportTarget === `${cfg.spreadsheetId}|${cfg.sheetName}|${cfg.startFromMs}`) {
+    const legacy = await db.collection(SHEET_DAILY).doc(workspace).collection("items").doc(dailyId(workspace, accountId, billingDate)).get();
+    if (legacy.data()?.sheetCell === location.cell && legacy.data()?.baselineInitialized) daily = legacy.data();
+  }
   let baseline = Number(daily.baselineAmount || 0);
   let total = 0;
   if (options.rewriteExact) {
     // Manual reconciliation giống website mẫu: ghi chính xác toàn bộ bill đã quét.
     // Baseline giữ phần lịch sử nằm ngoài mốc auto, để bill mới tiếp tục cộng đúng.
-    const autoEvents = await eligibleEvents(workspace, accountId, billingDate, { ignoreStart: false });
-    const autoEventTotal = autoEvents.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const autoEvents = await eligibleEvents(workspace, accountId, billingDate, { ignoreStart: false, currency: cfg.currency });
+    const autoEventTotal = moneySum(autoEvents, cfg.currency);
     ({ baseline, total } = computeSheetTotals({ eventTotal, autoEventTotal, rewriteExact: true }));
   } else {
     let current = 0;
@@ -391,10 +440,13 @@ async function syncAccountDateToSheet(workspace, accountId, billingDate, options
     }
     ({ baseline, total } = computeSheetTotals({ current, eventTotal, alreadySyncedTotal, storedBaseline: daily.baselineAmount, baselineInitialized: !!daily.baselineInitialized }));
   }
+  total = moneySum([{ amount: total }], cfg.currency);
+  // Save the baseline BEFORE the remote write, so retry after a timeout cannot add it twice.
+  await dailyRef.set({ baselineAmount: baseline, baselineInitialized: true }, { merge: true });
   await valuesUpdate(workspace, cfg.spreadsheetId, `'${index.sheet}'!${location.cell}`, [[total]]);
   const syncedAtMs = Date.now();
   for (const event of events) {
-    await event.ref.set({ googleSheetSyncedAtMs: syncedAtMs, googleSheetCell: location.cell, googleSheetBillingDate: billingDate, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    await event.ref.set({ googleSheetDestination: destination, googleSheetSyncedAtMs: syncedAtMs, googleSheetCell: location.cell, googleSheetBillingDate: billingDate, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
   await dailyRef.set({
     accountId: normalizeAccountId(accountId), billingDate, sheetCell: location.cell,
@@ -403,28 +455,50 @@ async function syncAccountDateToSheet(workspace, accountId, billingDate, options
     lastSheetSyncedAtMs: syncedAtMs, updatedAt: FieldValue.serverTimestamp(),
     manualReconciledAtMs: options.rewriteExact ? syncedAtMs : Number(daily.manualReconciledAtMs || 0),
   }, { merge: true });
-  return { skipped: false, cell: location.cell, baseline, eventTotal, alreadySyncedTotal, total, eventCount: events.length };
+  return { skipped: false, currency: cfg.currency, cell: location.cell, baseline, eventTotal, alreadySyncedTotal, total, eventCount: events.length };
+  } finally {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(dailyRef);
+      if (snap.data()?.leaseOwner === owner) tx.set(dailyRef, { leaseUntil: 0, leaseOwner: "" }, { merge: true });
+    });
+  }
 }
 async function autoSyncEventGroups(workspace, events = []) {
+  const state = await getState(workspace), results = [], errors = [];
+  let enabled = false;
+  for (const currency of ["VND", "USD"]) {
+    if (currency === "USD" && state.googleSheetOnlyVnd !== false) continue;
+    const result = await autoSyncCurrency(workspace, events, currency);
+    enabled ||= result.enabled;
+    results.push(...(result.results || [])); errors.push(...(result.errors || []));
+  }
+  await stateRef(workspace).set({ googleSheetLastAutoWritten: results.length, googleSheetLastErrors: errors.slice(0, 50) }, { merge: true });
+  return { enabled, written: results.length, results, errors };
+}
+async function autoSyncCurrency(workspace, events = [], currency = "VND") {
   try {
-    const state = await getState(workspace), cfg = sheetCfg(state);
-    if (!cfg.autoEnabled || !cfg.spreadsheetId || !cfg.startFromMs) return { enabled: false, written: 0, errors: [] };
+    const state = await getState(workspace), cfg = sheetCfg(state, currency);
+    if (!cfg.autoEnabled || !cfg.startFromMs) return { enabled: false, written: 0, errors: [] };
+    if (!cfg.spreadsheetId) {
+      if (events.some(e => String(e.currency).toUpperCase() === currency)) throw new Error(`Chưa cấu hình Sheet ${currency}.`);
+      return { enabled: true, written: 0, errors: [] };
+    }
     const groups = new Map();
     for (const e of events || []) {
-      if (String(e.eventType || "") !== "ad_account_billing_charge" || Number(e.amount || 0) <= 0) continue;
+      if (String(e.eventType || "") !== "ad_account_billing_charge" || !Number.isFinite(Number(e.amount)) || Number(e.amount) <= 0 || ["parse_error", "failed", "estimated"].includes(e.status)) continue;
       const atMs = Number(e.eventTimeMs || Date.parse(e.eventTime || "") || 0);
       if (atMs < cfg.startFromMs) continue;
-      if (cfg.onlyVnd && String(e.currency || "").toUpperCase() !== "VND") continue;
+      if (String(e.currency || "").toUpperCase() !== currency) continue;
       const date = eventBillingDate(e.eventTime || atMs, cfg.timeZone);
       const id = normalizeAccountId(e.accountId);
       if (!id) continue;
       groups.set(`${id}|${date}`, { accountId: id, billingDate: date });
     }
     if (!groups.size) return { enabled: true, written: 0, errors: [] };
-    const index = await loadSheetIndex(workspace);
+    const index = await loadSheetIndex(workspace, currency);
     const results = [], errors = [];
     for (const group of groups.values()) {
-      try { results.push(await syncAccountDateToSheet(workspace, group.accountId, group.billingDate, { index })); }
+      try { results.push(await syncAccountDateToSheet(workspace, group.accountId, group.billingDate, { index, currency })); }
       catch (error) { errors.push({ ...group, error: error.message, code: error.code || "" }); }
     }
     await stateRef(workspace).set({ googleSheetLastAutoSyncAtMs: Date.now(), googleSheetLastAutoWritten: results.length, googleSheetLastErrors: errors.slice(0,50), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -435,19 +509,41 @@ async function autoSyncEventGroups(workspace, events = []) {
   }
 }
 async function fillAll(workspace, input = {}) {
-  const state = await getState(workspace), cfg = sheetCfg(state);
+  const currencies = input.currency ? [reportCurrency(input.currency)] : ["VND", "USD"];
+  const results = [], errors = [], state = await getState(workspace);
+  for (const currency of currencies) {
+    if (!sheetCfg(state, currency).spreadsheetId) continue;
+    try {
+      const result = await fillCurrency(workspace, input, currency);
+      results.push(...result.results); errors.push(...result.errors);
+    } catch (error) { errors.push({ currency, error: error.message }); }
+  }
+  if (!currencies.some(currency => sheetCfg(state, currency).spreadsheetId)) throw new Error("Chưa chọn Google Sheet.");
+  await stateRef(workspace).set({ googleSheetLastManualWritten: results.length, googleSheetLastErrors: errors.slice(0, 50) }, { merge: true });
+  return { written: results.length, results, errors };
+}
+async function fillCurrency(workspace, input = {}, currency = "VND") {
+  const state = await getState(workspace), cfg = sheetCfg(state, currency);
   if (!cfg.spreadsheetId) throw new Error("Chưa chọn Google Sheet.");
-  const events = await eligibleEvents(workspace, String(input.accountId || ""), "", { ignoreStart: true });
+  const events = await eligibleEvents(workspace, String(input.accountId || ""), "", { ignoreStart: true, currency });
   const from = String(input.from || "").slice(0,10), to = String(input.to || "").slice(0,10);
+  if (from && to && from > to) throw new Error("Ngày bắt đầu phải trước ngày kết thúc.");
   const groups = new Map();
   for (const e of events) {
     if (from && e.billingDate < from) continue;
     if (to && e.billingDate > to) continue;
     groups.set(`${normalizeAccountId(e.accountId)}|${e.billingDate}`, { accountId: normalizeAccountId(e.accountId), billingDate: e.billingDate });
   }
-  const index = await loadSheetIndex(workspace), results = [], errors = [];
+  const index = await loadSheetIndex(workspace, currency), results = [], errors = [];
+  const usedCells = new Map();
   for (const group of groups.values()) {
-    try { results.push(await syncAccountDateToSheet(workspace, group.accountId, group.billingDate, { index, force: true, ignoreStart: true, rewriteExact: true })); }
+    let cell;
+    try { cell = locateFromIndex(index, group.accountId, group.billingDate).cell; } catch { continue; }
+    if (usedCells.has(cell)) throw new Error("Nhiều ngày trùng ô báo cáo. Dùng tiêu đề có năm hoặc giới hạn khoảng ngày.");
+    usedCells.set(cell, group.billingDate);
+  }
+  for (const group of groups.values()) {
+    try { results.push(await syncAccountDateToSheet(workspace, group.accountId, group.billingDate, { index, currency, force: true, ignoreStart: true, rewriteExact: true })); }
     catch (error) { errors.push({ ...group, error: error.message, code: error.code || "" }); }
   }
   await stateRef(workspace).set({ googleSheetLastManualFillAtMs: Date.now(), googleSheetLastManualWritten: results.length, googleSheetLastErrors: errors.slice(0,50), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -477,8 +573,8 @@ async function resetCredentials(workspace) {
   }, { merge: true });
   return { reset: true, redirectUri: redirectUri() };
 }
-async function testSheet(workspace) {
-  const state = await getState(workspace), cfg = sheetCfg(state);
+async function testSheet(workspace, currency = "VND") {
+  const state = await getState(workspace), cfg = sheetCfg(state, currency);
   if (!cfg.spreadsheetId) throw new Error("Chưa chọn Google Sheet.");
   const meta = await spreadsheetMeta(workspace, cfg.spreadsheetId);
   return { spreadsheetId: cfg.spreadsheetId, title: meta.properties?.title || cfg.spreadsheetTitle, sheetName: cfg.sheetName, sheets: (meta.sheets || []).map(s => s.properties?.title).filter(Boolean) };
@@ -491,6 +587,7 @@ async function status(workspace) {
   const deletedProject = Boolean(projectNumber && deletedGoogleProjectNumbers().has(projectNumber));
   const connected = Boolean(state.googleRefreshTokenEnc || state.googleAccessTokenEnc) && !deletedProject;
   return {
+    reports: { VND: sheetCfg(state, "VND"), USD: sheetCfg(state, "USD") },
     connected,
     email: state.googleEmail || "",
     clientConfigured: Boolean(env || (state.googleClientId && state.googleClientSecretEnc)),
@@ -513,6 +610,7 @@ async function status(workspace) {
 }
 
 module.exports = {
+  sheetCfg, moneySum, reportCurrency,
   status, saveCredentials, createAuthUrl, exchangeCallback, disconnect, resetCredentials,
   saveSheetSettings, testSheet, startNow, fillAll, autoSyncEventGroups,
   eventBillingDate, billingDateToHeader, extractSpreadsheetId, computeSheetTotals,

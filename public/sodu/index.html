@@ -1098,7 +1098,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
 
         <div class="grid-2" style="margin-top:16px">
           <div class="setting-box">
-            <div class="field"><label>Meta Access Token</label><input id="metaBillingAccessToken" type="password" autocomplete="off" placeholder="EAAB... / System User Access Token" /><div class="helper-note">Token được mã hóa ở backend trước khi lưu PostgreSQL. Không dùng Outlook, AdsCheck hay extension trình duyệt.</div></div>
+            <div class="field"><label>Meta Access Token — nhiều API</label><textarea id="metaBillingAccessToken" rows="4" autocomplete="off" spellcheck="false" placeholder="Mỗi dòng một Access Token"></textarea><div class="helper-note">Tối đa 20 token, mỗi dòng một token. Danh sách mới thay thế danh sách đã lưu; để trống để giữ nguyên. Token được mã hóa ở backend trước khi lưu PostgreSQL. Không dùng Outlook, AdsCheck hay extension trình duyệt.</div></div>
             <div class="row">
               <div class="field" style="flex:1"><label>Graph API version</label><input id="metaBillingGraphVersion" value="v26.0" /></div>
               <div class="field" style="flex:1"><label>Chu kỳ tự quét</label><select id="metaBillingSyncInterval"><option value="5">5 phút</option><option value="10" selected>10 phút</option><option value="15">15 phút</option><option value="30">30 phút</option><option value="60">60 phút</option></select></div>
@@ -1147,7 +1147,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
               <div class="outlook-stat"><div class="k">Lần ghi gần nhất</div><div class="v" id="googleLastSyncText" style="font-size:13px">—</div></div>
               <div class="outlook-stat"><div class="k">Ô đã ghi</div><div class="v" id="googleWrittenCount">0</div></div>
             </div>
-            <label class="check-row"><input id="googleOnlyVnd" type="checkbox" checked /> Chỉ điền bill VND</label>
+            <label class="check-row"><input id="googleOnlyVnd" type="checkbox" checked /> Tự động chỉ điền VND (bỏ chọn để điền cả USD vào tab riêng)</label>
             <div class="row"><button id="btnGoogleStartNow" type="button">Bắt đầu tự động từ bây giờ</button><button class="ghost" id="btnGoogleStopAuto" type="button">Tắt tự động</button></div>
             <div class="notice"><b>Quy tắc:</b> tự động chỉ cộng bill mới sau mốc bắt đầu. Nút “Điền lại báo cáo” bên dưới có thể ghi lại dữ liệu lịch sử theo khoảng ngày.</div>
           </div>
@@ -1155,7 +1155,7 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
       </div>
 
       <div class="card section-card" style="margin-top:16px">
-        <div class="toolbar"><div><h2 style="margin:0">Chọn Google Sheet và cấu trúc báo cáo</h2><div class="footer-note">Cấu trúc tương thích website mẫu: Account ID ở một cột, ngày ở hàng tiêu đề, số tiền được ghi tại giao điểm.</div></div><div class="right"><button class="secondary" id="btnGoogleTestSheet" type="button">Kiểm tra Sheet</button><button id="btnGoogleSaveSheet" type="button">Lưu cấu hình Sheet</button></div></div>
+        <div class="toolbar"><div><h2 style="margin:0">Báo cáo VND (₫) — cấu hình riêng</h2><div class="footer-note">Cấu trúc tương thích website mẫu: Account ID ở một cột, ngày ở hàng tiêu đề, số tiền được ghi tại giao điểm.</div></div><div class="right"><button class="secondary" id="btnGoogleTestSheet" type="button">Kiểm tra Sheet</button><button id="btnGoogleSaveSheet" type="button">Lưu cấu hình Sheet</button></div></div>
         <div class="setting-box" style="margin-top:14px">
           <div class="field"><label>Link Google Sheet</label><input id="googleSpreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit" /></div>
           <div class="grid-2">
@@ -1167,6 +1167,22 @@ button,.btn,.nav button,.bank-visual-card{transition-property:transform,box-shad
             <div class="field"><label>Cột ngày kết thúc</label><input id="googleDateEndColumn" value="AK" /></div>
           </div>
           <div class="upload-status" id="googleSheetConfigStatus">Chưa chọn Google Sheet.</div><div class="helper-note" style="margin-top:8px">Nên định dạng cột Account ID là <b>Plain text</b> trong Google Sheet để ID dài không bị Google làm tròn.</div>
+        </div>
+      </div>
+
+      <div class="card section-card" style="margin-top:16px">
+        <div class="toolbar"><div><h2 style="margin:0">Báo cáo USD ($) — cấu hình riêng</h2><div class="footer-note">Cấu trúc tương thích website mẫu: Account ID ở một cột, ngày ở hàng tiêu đề, số tiền được ghi tại giao điểm.</div></div><div class="right"><button class="secondary" id="btnGoogleTestSheetUsd" type="button">Kiểm tra Sheet</button><button id="btnGoogleSaveSheetUsd" type="button">Lưu cấu hình Sheet</button></div></div>
+        <div class="setting-box" style="margin-top:14px">
+          <div class="field"><label>Link Google Sheet</label><input id="googleSpreadsheetUrlUsd" placeholder="https://docs.google.com/spreadsheets/d/.../edit" /></div>
+          <div class="grid-2">
+            <div class="field"><label>Tên sheet</label><input id="googleSheetNameUsd" value="Chi tiết DT USD" /></div>
+            <div class="field"><label>Dòng tiêu đề ngày</label><input id="googleHeaderRowUsd" type="number" value="2" /></div>
+            <div class="field"><label>Cột Account ID</label><input id="googleAccountIdColumnUsd" value="C" /></div>
+            <div class="field"><label>Dòng tối đa cần dò</label><input id="googleScanMaxRowUsd" type="number" value="5000" /></div>
+            <div class="field"><label>Cột ngày bắt đầu</label><input id="googleDateStartColumnUsd" value="G" /></div>
+            <div class="field"><label>Cột ngày kết thúc</label><input id="googleDateEndColumnUsd" value="AK" /></div>
+          </div>
+          <div class="upload-status" id="googleSheetConfigStatusUsd">Chưa chọn Google Sheet.</div><div class="helper-note" style="margin-top:8px">Nên định dạng cột Account ID là <b>Plain text</b> trong Google Sheet để ID dài không bị Google làm tròn.</div>
         </div>
       </div>
 
@@ -1488,6 +1504,13 @@ function unignoreAdAccount(accountId) {
   const id = normalizeAdAccountId(accountId);
   if (!id) return;
   data.settings.deletedAdAccountIds = deletedAdAccountIds().filter((item) => normalizeAdAccountId(item) !== id);
+}
+function adCurrency(ad) { return String(ad.metaCurrency || ad.metaApi?.currency || ad.adsCheckCurrency || ad.adsCheck?.currency || "VND").toUpperCase(); }
+function adMoney(ad, n) { const currency = adCurrency(ad); return `${Number(n || 0).toLocaleString("vi-VN", { minimumFractionDigits: currency === "USD" ? 2 : 0, maximumFractionDigits: 2 })} ${escapeHtml(currency)}`; }
+function currencyTotals(ads, amount) {
+  const totals = new Map();
+  for (const ad of ads) { const currency = adCurrency(ad); totals.set(currency, (totals.get(currency) || 0) + amount(ad)); }
+  return [...totals].map(([currency, value]) => `${value.toLocaleString("vi-VN", { maximumFractionDigits: 2 })} ${currency}`).join(" · ") || "0 VND";
 }
 const money = (n) => `${Number(n || 0).toLocaleString("vi-VN")} đ`;
 const formatBankAccountNumber = (value) => {
@@ -2282,10 +2305,10 @@ function renderAdsCheckSection() {
     const state = getAdStatus(ad);
     return `<div class="adscheck-row" data-selected="${ad.adsCheckSelected !== false}">
       <div><div class="adscheck-account-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="adscheck-account-id">${escapeHtml(ad.accountId || "Chưa có ID")} · ${escapeHtml(ad.adsCheckStatus || ad.adsCheck?.status || "")}</div></div>
-      <div class="adscheck-cell"><div class="k">Số dư TKQC</div><div class="v">${money(ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0)}<div class="helper-note">Meta API</div></div></div>
-      <div class="adscheck-cell"><div class="k">Ngưỡng</div><div class="v">${money(ad.adsCheck?.threshold ?? ad.threshold ?? 0)}<div class="helper-note">${ad.lastAdsCheckSyncAt ? "Meta API" : "Dữ liệu hiện tại"}</div></div></div>
-      <div class="adscheck-cell"><div class="k">Còn lại</div><div class="v">${money(ad.remainingThreshold || ad.adsCheck?.remainingThreshold || Math.max(0, Number(ad.adsCheck?.threshold ?? ad.threshold ?? 0) - Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? 0)))}</div></div>
-      <div class="adscheck-cell"><div class="k">Limit</div><div class="v">${money(ad.adsCheckLimit ?? ad.adsCheck?.limit ?? 0)}<div class="helper-note">${escapeHtml(ad.adsCheckCurrency || ad.adsCheck?.currency || "")}</div></div></div>
+      <div class="adscheck-cell"><div class="k">Số dư TKQC</div><div class="v">${adMoney(ad, ad.adsCheckBalance ?? ad.adsCheck?.balance ?? ad.billingPageBalance ?? ad.uiScanBalance ?? ad.metaApiBalance ?? 0)}<div class="helper-note">Meta API</div></div></div>
+      <div class="adscheck-cell"><div class="k">Ngưỡng</div><div class="v">${adMoney(ad, ad.adsCheck?.threshold ?? ad.threshold ?? 0)}<div class="helper-note">${ad.lastAdsCheckSyncAt ? "Meta API" : "Dữ liệu hiện tại"}</div></div></div>
+      <div class="adscheck-cell"><div class="k">Còn lại</div><div class="v">${adMoney(ad, ad.remainingThreshold || ad.adsCheck?.remainingThreshold || Math.max(0, Number(ad.adsCheck?.threshold ?? ad.threshold ?? 0) - Number(ad.metaApiBalance ?? ad.metaApi?.balance ?? 0)))}</div></div>
+      <div class="adscheck-cell"><div class="k">Limit</div><div class="v">${adMoney(ad, ad.adsCheckLimit ?? ad.adsCheck?.limit ?? 0)}<div class="helper-note">${escapeHtml(ad.adsCheckCurrency || ad.adsCheck?.currency || "")}</div></div></div>
       <div class="adscheck-cell"><div class="k">Thẻ</div><div class="v">${escapeHtml(ad.adsCheck?.paymentMethodText || (ad.paymentCardLast4 ? "•••• " + ad.paymentCardLast4 : "----"))}</div></div>
       <div class="adscheck-cell"><div class="k">Số dư thẻ</div><div class="v"><span class="badge ${state.cls}">${state.text}</span><div class="helper-note">${escapeHtml(bank?.name || "Chưa gắn thẻ")} · ${money(bankBalance)} / cần ${money(required)}</div></div></div>
     </div>`;
@@ -2375,6 +2398,7 @@ async function loadMetaBillingAccounts(silent = false) {
     metaBillingAvailableAccountsCache = Array.isArray(result.accounts) ? result.accounts : [];
     if (!metaBillingSelectionDirty && Array.isArray(result.selectedAccountIds)) metaBillingDraftSelectedIds = new Set(result.selectedAccountIds.map(String));
     renderMetaBillingAccountPicker();
+    if (result.tokenErrors?.length) alert(result.tokenErrors.map(e => e.error).join("\n"));
     if (cloudReady) await pullCloud({ silent: true });
     render();
     if (!silent) addSyncLog(`Meta API: đã tải ${metaBillingAvailableAccountsCache.length} TKQC và tự thêm tài khoản còn thiếu vào data.`);
@@ -2551,6 +2575,7 @@ async function testMetaBillingConnection() {
     const accountText = Number(result.accountCount || 0).toLocaleString("vi-VN");
     if (Array.isArray(result.accounts)) metaBillingAvailableAccountsCache = result.accounts;
     renderMetaBillingAccountPicker();
+    if (result.tokenErrors?.length) alert(result.tokenErrors.map(e => e.error).join("\n"));
     if (cloudReady) await pullCloud({ silent: true });
     render();
     addSyncLog(`Meta API OK: ${result.profile?.name || "User"} · ${accountText} TKQC · activities edge truy cập được.`);
@@ -3001,11 +3026,11 @@ function renderDashboardAdCards(accounts) {
           : ad.adsCheckV6LastSyncAt ? "AdsCheck V6" : ad.metaLastSyncAt ? "Meta API" : "Thủ công";
     return `<article class="ad-balance-card ${state.shortage > 0 ? "risk" : ""}">
       <div class="ad-card-top"><div><div class="ad-card-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="ad-card-id">${escapeHtml(ad.accountId || "Chưa có ID")}</div></div></div>
-      <div class="ad-card-balance">${money(state.balance)}</div><div class="ad-card-caption">Số dư tài khoản quảng cáo hiện tại</div>
+      <div class="ad-card-balance">${adMoney(ad, state.balance)}</div><div class="ad-card-caption">Số dư tài khoản quảng cáo hiện tại</div>
       <div class="ad-progress" title="${state.progress.toFixed(1)}% ngưỡng"><span style="width:${state.progress.toFixed(1)}%"></span></div>
       <div class="ad-card-meta">
-        <div><div class="k">Ngưỡng</div><div class="v">${money(state.threshold)}</div></div>
-        <div><div class="k">Còn lại</div><div class="v">${money(adRemainingThreshold(ad))}</div></div>
+        <div><div class="k">Ngưỡng</div><div class="v">${adMoney(ad, state.threshold)}</div></div>
+        <div><div class="k">Còn lại</div><div class="v">${adMoney(ad, adRemainingThreshold(ad))}</div></div>
         <div><div class="k">Thẻ liên kết</div><div class="v">${escapeHtml(ad.paymentCardBrand || "")} •••• ${escapeHtml(last4)}</div></div>
         <div><div class="k">Nguồn tiền</div><div class="v" style="color:${state.status.cls === "bad" ? "var(--bad)" : state.status.cls === "warn" ? "var(--warn)" : "var(--ok)"}">${escapeHtml(state.status.text)}${state.bank && state.shortage > 0 ? ` · Thiếu ${money(state.shortage)}` : ""}</div></div>
         <div><div class="k">Ngày thu tiếp</div><div class="v">${escapeHtml(nextBillingText)}</div></div>
@@ -3093,8 +3118,8 @@ function renderSmartDashboard() {
   setText("mAdCountText", `${tracked.length.toLocaleString("vi-VN")} đang theo dõi · ${synced.length} đã từng đồng bộ`);
   setText("mTotalBank", money(totalBank));
   renderHeroBankSources();
-  setText("mTotalAdBalance", money(totalAdBalance));
-  setText("mRemainingThreshold", money(totalRemaining));
+  setText("mTotalAdBalance", currencyTotals(tracked, adAccountBalance));
+  setText("mRemainingThreshold", currencyTotals(tracked, adRemainingThreshold));
   setText("mNeedTopup", insufficient.length.toLocaleString("vi-VN"));
   setText("mInsufficientAmount", `Thiếu ${money(shortageTotal)}`);
   setText("mAdsCheckSyncBadge", `${tracked.length} đang theo dõi`);
@@ -3130,7 +3155,7 @@ function renderDashboardAdSelectionList() {
   const q = String(el("dashboardAdSelectionSearch")?.value || "").trim().toLowerCase();
   const accounts = syncedAdsCheckAccounts().filter((ad) => !q || `${ad.name || ""} ${ad.accountId || ""}`.toLowerCase().includes(q));
   if (!accounts.length) { wrap.innerHTML = '<div class="empty">Chưa có tài khoản Meta API phù hợp.</div>'; return; }
-  wrap.innerHTML = accounts.map((ad) => `<label class="selection-item"><input type="checkbox" data-dashboard-ad-id="${escapeHtml(ad.id)}" ${dashboardAdSelectionDraft.has(String(ad.id)) ? "checked" : ""}><div><div class="selection-item-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="selection-item-id">${escapeHtml(ad.accountId || "Chưa có ID")} · ${ad.adsCheckSelected === false ? "Đã bỏ chọn" : "Đang theo dõi"}</div></div><div class="selection-item-value">${money(adAccountBalance(ad))}</div></label>`).join("");
+  wrap.innerHTML = accounts.map((ad) => `<label class="selection-item"><input type="checkbox" data-dashboard-ad-id="${escapeHtml(ad.id)}" ${dashboardAdSelectionDraft.has(String(ad.id)) ? "checked" : ""}><div><div class="selection-item-name">${escapeHtml(ad.name || "Tài khoản quảng cáo")}</div><div class="selection-item-id">${escapeHtml(ad.accountId || "Chưa có ID")} · ${ad.adsCheckSelected === false ? "Đã bỏ chọn" : "Đang theo dõi"}</div></div><div class="selection-item-value">${adMoney(ad, adAccountBalance(ad))}</div></label>`).join("");
   wrap.querySelectorAll("[data-dashboard-ad-id]").forEach((input) => input.addEventListener("change", () => {
     const id = String(input.dataset.dashboardAdId || "");
     if (input.checked) dashboardAdSelectionDraft.add(id); else dashboardAdSelectionDraft.delete(id);
@@ -3949,6 +3974,16 @@ function renderGoogleSheetsStatus(status = googleSheetsStatusCache) {
   if (el("googleSheetConfigStatus")) el("googleSheetConfigStatus").textContent = status.spreadsheetConfigured
     ? `✓ ${status.spreadsheetTitle || "Google Sheet"} / ${status.sheetName || ""} · ${status.spreadsheetIdHint || ""}`
     : "Chưa chọn Google Sheet.";
+  for (const [currency, cfg] of Object.entries(status.reports || {})) {
+    const suffix = currency === "USD" ? "Usd" : "";
+    const fields = { googleSpreadsheetUrl: "spreadsheetId", googleSheetName: "sheetName", googleHeaderRow: "headerRow", googleAccountIdColumn: "accountIdColumn", googleScanMaxRow: "scanMaxRow", googleDateStartColumn: "dateStartColumn", googleDateEndColumn: "dateEndColumn" };
+    for (const [id, key] of Object.entries(fields)) {
+      const node = el(id + suffix);
+      if (node && cfg.spreadsheetId && document.activeElement !== node) node.value = cfg[key] || "";
+    }
+    const node = el("googleSheetConfigStatus" + suffix);
+    if (node) node.textContent = cfg.spreadsheetId ? `✓ ${currency} · ${cfg.spreadsheetTitle} / ${cfg.sheetName}` : `Chưa cấu hình báo cáo ${currency}.`;
+  }
   if (status.lastError && el("googleFillStatus")) el("googleFillStatus").textContent = `Lỗi gần nhất: ${status.lastError}`;
 }
 async function refreshGoogleSheetsStatus(silent = true) {
@@ -3993,29 +4028,32 @@ async function resetGoogleOAuthCredentials() {
     alert("Đã xóa OAuth cũ. Hãy nhập Client ID/Secret từ Google Cloud project đang hoạt động rồi Kết nối Google lại.");
   } catch (error) { alert(error.message); }
 }
-function googleSheetSettingsFromUi() {
+function googleSheetSettingsFromUi(currency = "VND") {
+  const suffix = currency === "USD" ? "Usd" : "";
   return {
-    spreadsheetUrl: String(el("googleSpreadsheetUrl")?.value || "").trim(),
-    sheetName: String(el("googleSheetName")?.value || "Chi tiết dòng tiền").trim(),
-    headerRow: Number(el("googleHeaderRow")?.value || 2),
-    accountIdColumn: String(el("googleAccountIdColumn")?.value || "C").trim(),
-    dateStartColumn: String(el("googleDateStartColumn")?.value || "G").trim(),
-    dateEndColumn: String(el("googleDateEndColumn")?.value || "AK").trim(),
-    scanMaxRow: Number(el("googleScanMaxRow")?.value || 5000),
+    currency,
+    spreadsheetUrl: String(el("googleSpreadsheetUrl" + suffix)?.value || "").trim(),
+    sheetName: String(el("googleSheetName" + suffix)?.value || "Chi tiết dòng tiền").trim(),
+    headerRow: Number(el("googleHeaderRow" + suffix)?.value || 2),
+    accountIdColumn: String(el("googleAccountIdColumn" + suffix)?.value || "C").trim(),
+    dateStartColumn: String(el("googleDateStartColumn" + suffix)?.value || "G").trim(),
+    dateEndColumn: String(el("googleDateEndColumn" + suffix)?.value || "AK").trim(),
+    scanMaxRow: Number(el("googleScanMaxRow" + suffix)?.value || 5000),
     onlyVnd: el("googleOnlyVnd")?.checked !== false,
     timeZone: "Asia/Ho_Chi_Minh"
   };
 }
-async function saveGoogleSheetSettings() {
+async function saveGoogleSheetSettings(currency = "VND") {
+  const suffix = currency === "USD" ? "Usd" : "";
   try {
-    const result = await callMetaBridge("googleSheetsSaveSettings", googleSheetSettingsFromUi());
-    if (el("googleSheetConfigStatus")) el("googleSheetConfigStatus").textContent = `✓ ${result.spreadsheetTitle} / ${result.sheetName}`;
+    const result = await callMetaBridge("googleSheetsSaveSettings", googleSheetSettingsFromUi(currency));
+    if (el("googleSheetConfigStatus" + suffix)) el("googleSheetConfigStatus" + suffix).textContent = `✓ ${result.spreadsheetTitle} / ${result.sheetName}`;
     alert("Đã kết nối Google Sheet thành công.");
     await refreshGoogleSheetsStatus(true);
   } catch (error) { alert(error.message || "Không lưu được cấu hình Google Sheet."); }
 }
-async function testGoogleSheet() {
-  try { const r = await callMetaBridge("googleSheetsTest"); alert(`Google Sheet hoạt động: ${r.title} → ${r.sheetName}`); }
+async function testGoogleSheet(currency = "VND") {
+  try { const r = await callMetaBridge("googleSheetsTest", { currency }); alert(`Google Sheet hoạt động: ${r.title} → ${r.sheetName}`); }
   catch (error) { alert(error.message || "Google Sheet không truy cập được."); }
 }
 async function setGoogleAuto(enabled) {
@@ -4033,7 +4071,7 @@ async function fillGoogleSheetAll() {
     if (status) status.textContent = "Đang đối chiếu Account ID × ngày và ghi Google Sheet…";
     const r = await callMetaBridge("googleSheetsFillAll", { from: el("googleFillFrom")?.value || "", to: el("googleFillTo")?.value || "" });
     if (status) status.textContent = `Đã ghi ${Number(r.written || 0)} ô${r.errors?.length ? ` · ${r.errors.length} lỗi mapping` : ""}.`;
-    if (r.errors?.length) console.warn("Google Sheet mapping errors", r.errors);
+    if (r.errors?.length && status) status.textContent += " " + r.errors.map(e => `${e.currency || e.accountId || ""}: ${e.error}`).join("; ");
     await refreshGoogleSheetsStatus(true);
     alert(`Đã điền ${Number(r.written || 0)} ô Google Sheet${r.errors?.length ? ` · ${r.errors.length} ô không map được` : ""}.`);
   } catch (error) { if (status) status.textContent = `Lỗi: ${error.message}`; alert(error.message); }
@@ -4043,8 +4081,10 @@ el("btnGoogleSaveCredentials")?.addEventListener("click", () => saveGoogleOAuthC
 el("btnGoogleConnect")?.addEventListener("click", connectGoogleSheets);
 el("btnGoogleDisconnect")?.addEventListener("click", disconnectGoogleSheets);
 el("btnGoogleResetCredentials")?.addEventListener("click", resetGoogleOAuthCredentials);
-el("btnGoogleSaveSheet")?.addEventListener("click", saveGoogleSheetSettings);
-el("btnGoogleTestSheet")?.addEventListener("click", testGoogleSheet);
+el("btnGoogleSaveSheet")?.addEventListener("click", () => saveGoogleSheetSettings("VND"));
+el("btnGoogleSaveSheetUsd")?.addEventListener("click", () => saveGoogleSheetSettings("USD"));
+el("btnGoogleTestSheet")?.addEventListener("click", () => testGoogleSheet("VND"));
+el("btnGoogleTestSheetUsd")?.addEventListener("click", () => testGoogleSheet("USD"));
 el("btnGoogleStartNow")?.addEventListener("click", () => setGoogleAuto(true));
 el("btnGoogleStopAuto")?.addEventListener("click", () => setGoogleAuto(false));
 el("btnGoogleFillAll")?.addEventListener("click", fillGoogleSheetAll);

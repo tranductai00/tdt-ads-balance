@@ -1216,7 +1216,7 @@ const DEFAULT_ADSCHECK_SETTINGS = Object.freeze({
 
 function cleanPositiveNumber(value) {
   const number = Number(value || 0);
-  return Number.isFinite(number) && number > 0 ? Math.round(number) : 0;
+  return Number.isFinite(number) && number > 0 ? Math.round(number * 100) / 100 : 0;
 }
 
 function cleanTimestampMs(value) {
@@ -1330,7 +1330,7 @@ function metaMoneyToMajor(value, currency) {
   const raw = Number(value || 0);
   if (!Number.isFinite(raw) || raw <= 0) return 0;
   const divisor = META_ZERO_DECIMAL_CURRENCIES.has(String(currency || "").toUpperCase()) ? 1 : 100;
-  return Math.round(raw / divisor);
+  return raw / divisor;
 }
 
 function metaFundingDetails(value) {
@@ -1343,7 +1343,29 @@ function metaFundingDetails(value) {
   };
 }
 
+function metaTokens(value) {
+  const tokens = [...new Set((Array.isArray(value) ? value : String(value || "").split(/\s+/)).map(v => String(v).trim()).filter(Boolean))];
+  if (tokens.length > 20) throw new Error("Tối đa 20 Meta Access Token mỗi workspace.");
+  return tokens;
+}
+const accountTokens = new WeakMap();
 async function metaGraphFetch(url, accessToken, options = {}) {
+  const tokens = metaTokens(accessToken);
+  // Paging URLs may carry the original token. Always use the selected bearer token.
+  const safeUrl = new URL(url);
+  if (safeUrl.protocol !== "https:" || safeUrl.hostname !== "graph.facebook.com") throw new Error("Meta paging URL không hợp lệ.");
+  safeUrl.searchParams.delete("access_token");
+  let last;
+  for (const token of tokens) {
+    try { return await metaGraphFetchSingle(safeUrl.toString(), token, options); }
+    catch (error) {
+      last = error;
+      if (!["190", "102", "10", "200", "100"].includes(String(error.code)) && !error.transient) throw error;
+    }
+  }
+  throw last || new Error("Chưa có Meta Access Token.");
+}
+async function metaGraphFetchSingle(url, accessToken, options = {}) {
   let lastError = null;
   const maxAttempts = Math.max(1, Math.min(4, Number(options.maxAttempts || 3)));
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -1401,6 +1423,12 @@ async function metaGraphRequest(path, accessToken, graphVersion, query = {}) {
 }
 
 async function validateMetaAccessToken(accessToken, graphVersion) {
+  const profiles = [];
+  for (const token of metaTokens(accessToken)) profiles.push(await validateSingleMetaAccessToken(token, graphVersion));
+  if (!profiles.length) throw new Error("Chưa có Meta Access Token.");
+  return { id: profiles[0].id, name: profiles.map(p => p.name).join(", ").slice(0, 160) };
+}
+async function validateSingleMetaAccessToken(accessToken, graphVersion) {
   const profile = await metaGraphRequest("/me", accessToken, graphVersion, { fields: "id,name" });
   // Kiểm tra luôn edge quảng cáo để phát hiện sớm token hợp lệ nhưng thiếu quyền ads_read/ads_management.
   await metaGraphRequest("/me/adaccounts", accessToken, graphVersion, { fields: "id,account_id,name", limit: "1" });
@@ -1425,6 +1453,7 @@ function metaBillingDateCandidate(value) {
 }
 
 function deriveMetaBillingProfile(account, activities = []) {
+  const roundMoney = value => Math.round(value * (account?.currency === "USD" ? 100 : 1)) / (account?.currency === "USD" ? 100 : 1);
   const successful = (Array.isArray(activities) ? activities : [])
     .filter((event) => event?.isSuccessfulCharge && Number(event?.amount || 0) > 0)
     .sort((a, b) => Number(b.eventTimeMs || 0) - Number(a.eventTimeMs || 0));
@@ -1437,12 +1466,12 @@ function deriveMetaBillingProfile(account, activities = []) {
     const latest = recent[0] || 0;
     const sameAsLatest = recent.filter((amount) => latest > 0 && Math.abs(amount - latest) / latest <= 0.02);
     if (sameAsLatest.length >= 2) {
-      threshold = Math.round(sameAsLatest.reduce((sum, n) => sum + n, 0) / sameAsLatest.length);
+      threshold = roundMoney(sameAsLatest.reduce((sum, n) => sum + n, 0) / sameAsLatest.length);
       thresholdConfidence = "high";
     } else {
       // Payment thresholds generally progress upward; max recent successful threshold charge
       // is a safer estimate than a small monthly catch-up charge.
-      threshold = Math.round(Math.max(...recent));
+      threshold = roundMoney(Math.max(...recent));
       thresholdConfidence = "medium";
     }
     thresholdSource = "meta_billing_activity";
@@ -1459,7 +1488,7 @@ function deriveMetaBillingProfile(account, activities = []) {
   }
 
   const balance = cleanPositiveNumber(account?.balance);
-  const remainingThreshold = threshold > 0 ? Math.max(0, Math.round(threshold - balance)) : 0;
+  const remainingThreshold = threshold > 0 ? Math.max(0, roundMoney(threshold - balance)) : 0;
   return {
     threshold,
     remainingThreshold,
@@ -1474,6 +1503,7 @@ function deriveMetaBillingProfile(account, activities = []) {
 }
 
 async function fetchMetaAdAccountDetails(account, accessToken, graphVersion) {
+  accessToken = accountTokens.get(account) || accessToken;
   const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
   if (!accountId) return account;
   const richFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,funding_source,funding_source_details,is_prepay_account,show_checkout_experience,business{id,name}";
@@ -1528,6 +1558,27 @@ async function enrichMetaAccountsWithBillingInfo(accounts, accessToken, graphVer
 }
 
 async function fetchMetaAdAccounts(accessToken, graphVersion) {
+  const accounts = new Map(), tokenErrors = [];
+  let fundingDetailsAvailable = true, succeeded = 0;
+  const tokens = metaTokens(accessToken);
+  for (let i = 0; i < tokens.length; i++) {
+    try {
+      const result = await fetchSingleMetaAdAccounts(tokens[i], graphVersion);
+      succeeded++;
+      fundingDetailsAvailable = fundingDetailsAvailable && result.fundingDetailsAvailable;
+      for (const account of result.accounts) {
+        if (!accounts.has(account.accountId)) {
+          accounts.set(account.accountId, account);
+          accountTokens.set(account, []);
+        }
+        accountTokens.get(accounts.get(account.accountId)).push(tokens[i]);
+      }
+    } catch (error) { tokenErrors.push({ tokenIndex: i + 1, code: String(error.code || "META_ERROR"), error: `API ${i + 1} không tải được tài khoản; kiểm tra quyền hoặc hạn token.` }); }
+  }
+  if (!succeeded) throw new Error("Không tải được tài khoản từ các Meta API. Kiểm tra token và quyền truy cập.");
+  return { accounts: [...accounts.values()], tokenErrors, fundingDetailsAvailable, graphVersion: normalizeMetaGraphVersion(graphVersion) };
+}
+async function fetchSingleMetaAdAccounts(accessToken, graphVersion) {
   const version = normalizeMetaGraphVersion(graphVersion);
   const richFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,funding_source,funding_source_details,business{id,name}";
   const mediumFields = "id,account_id,name,account_status,currency,balance,amount_spent,spend_cap,business{id,name}";
@@ -1540,13 +1591,14 @@ async function fetchMetaAdAccounts(accessToken, graphVersion) {
     const items = [];
     let next = first.toString();
     let pageCount = 0;
-    while (next && items.length < 500 && pageCount < 10) {
+    while (next && pageCount < 100) {
       const payload = await metaGraphFetch(next, accessToken);
       if (Array.isArray(payload.data)) items.push(...payload.data);
       next = payload?.paging?.next || "";
       pageCount += 1;
     }
-    return items.slice(0, 500);
+    if (next) throw new Error("Danh sách Meta vượt 100 trang; chưa tải đầy đủ.");
+    return items;
   }
 
   let rawAccounts;
@@ -1621,7 +1673,7 @@ async function runMetaApiSync(workspace, state, reason = "manual", deviceName = 
       metaLastReceivedAtMs: syncedAtMs,
       metaLastScannedAtMs: metaScannedAtMs,
       metaLastReason: String(reason || "manual").slice(0, 60),
-      metaLastError: "",
+      metaLastError: (fetched.tokenErrors || []).map(e => e.error).join(" "),
       metaFundingDetailsAvailable: fetched.fundingDetailsAvailable,
       metaGraphVersion: fetched.graphVersion,
       metaSource: "marketing_api",
@@ -1661,7 +1713,7 @@ const META_BILLING_SUCCESS_TYPES = new Set([
 
 function normalizeMetaBillingConfig(state = {}) {
   const selectedAccountIds = [...new Set((Array.isArray(state.metaBillingSelectedAccountIds)
-    ? state.metaBillingSelectedAccountIds : []).map(normalizeAccountId).filter(Boolean))].slice(0, 500);
+    ? state.metaBillingSelectedAccountIds : []).map(normalizeAccountId).filter(Boolean))].slice(0, 10000);
   return {
     enabled: state.metaBillingEnabled !== false,
     autoSync: state.metaBillingAutoSync !== false,
@@ -2238,6 +2290,7 @@ function applyMetaBillingThresholdEstimate(event, recoveryContext) {
 }
 
 async function fetchMetaBillingActivitiesForAccount(account, accessToken, graphVersion, sinceMs, options = {}) {
+  accessToken = accountTokens.get(account) || accessToken;
   const version = normalizeMetaGraphVersion(graphVersion);
   const accountId = normalizeAccountId(account?.accountId || account?.account_id || account?.id);
   if (!accountId) return [];
@@ -2629,7 +2682,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       currency: String(item.currency || "").toUpperCase(),
       status: String(item.status || "").slice(0, 60),
       businessName: String(item.businessName || "").slice(0, 160),
-    })).filter((item) => item.accountId).slice(0, 500);
+    })).filter((item) => item.accountId).slice(0, 10000);
     let allAccounts = discoveredAccounts;
     const selectedIds = new Set(config.selectedAccountIds.map(normalizeAccountId).filter(Boolean));
     if (config.selectionMode === "selected") {
@@ -2656,7 +2709,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
     const nextScanCursor = totalAccounts ? (startCursor + accounts.length) % totalAccounts : 0;
 
     const allEvents = [];
-    const errors = [];
+    const errors = [...(accountResult.tokenErrors || [])];
     const concurrency = 4;
     for (let i = 0; i < accounts.length; i += concurrency) {
       const chunk = accounts.slice(i, i + concurrency);
@@ -2873,7 +2926,7 @@ async function runMetaBillingSync(workspace, state, reason = "manual", deviceNam
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (Array.isArray(error?.availableAccounts)) {
-      patch.metaBillingAvailableAccounts = error.availableAccounts.slice(0, 500);
+      patch.metaBillingAvailableAccounts = error.availableAccounts.slice(0, 10000);
       patch.metaBillingDiscoveredAccounts = error.availableAccounts.length;
     }
     await db.collection(META_STATES).doc(workspace).set(patch, { merge: true });
@@ -3294,7 +3347,7 @@ async function syncAdsCheckData(workspace, connection, body, deviceName) {
   const requestId = String(body.requestId || "").trim().slice(0, 120);
   const scannedAccounts = rawAccounts.map(normalizeAdsCheckAccount).filter(Boolean);
   const selectionMode = body.selectionMode === "selected" ? "selected" : "all";
-  const selectedAccountIds = [...new Set((Array.isArray(body.selectedAccountIds) ? body.selectedAccountIds : scannedAccounts.map((item) => item.accountId)).map(normalizeAccountId).filter(Boolean))].slice(0, 500);
+  const selectedAccountIds = [...new Set((Array.isArray(body.selectedAccountIds) ? body.selectedAccountIds : scannedAccounts.map((item) => item.accountId)).map(normalizeAccountId).filter(Boolean))].slice(0, 10000);
   const selectedAccountIdSet = new Set(selectedAccountIds);
   const discoveredCount = Math.max(scannedAccounts.length, Math.min(500, cleanPositiveNumber(body.discoveredCount) || scannedAccounts.length));
   if (!scannedAccounts.length) {
@@ -4174,7 +4227,7 @@ exports.metaBridge = onRequest({
 
     if (action === "googleSheetsTest") {
       await ensureWorkspaceKey(workspace, syncKey, deviceName, { req, body });
-      return sendJson(res, 200, { ok: true, ...(await googleSheets.testSheet(workspace)) });
+      return sendJson(res, 200, { ok: true, ...(await googleSheets.testSheet(workspace, body.currency)) });
     }
 
     if (action === "googleSheetsStartNow") {
@@ -4326,7 +4379,7 @@ exports.metaBridge = onRequest({
         update.metaAccessTokenEnc = encryptSecret(token);
         update.adsCheckV6Mode = false;
         update.metaSource = "marketing_api";
-        update.metaTokenHint = `••••${token.slice(-6)}`;
+        update.metaTokenHint = `${metaTokens(token).length} API · ••••${token.slice(-6)}`;
         update.metaUserId = profile.id;
         update.metaUserName = profile.name;
         update.metaReconnectRequired = false;
@@ -4394,7 +4447,7 @@ exports.metaBridge = onRequest({
         selectionMode: config.selectionMode,
         selectedAccountIds: config.selectedAccountIds,
         selectedAccountCount: Number(state.metaBillingSelectedAccountCount || (config.selectionMode === "selected" ? config.selectedAccountIds.length : state.metaBillingDiscoveredAccounts || state.metaBillingTotalAccounts || 0)),
-        availableAccounts: Array.isArray(state.metaBillingAvailableAccounts) ? state.metaBillingAvailableAccounts.slice(0, 500) : [],
+        availableAccounts: Array.isArray(state.metaBillingAvailableAccounts) ? state.metaBillingAvailableAccounts.slice(0, 10000) : [],
         eventsFound: Number(state.metaBillingEventsFound || 0),
         newBills: Number(state.metaBillingNewBills || 0),
         autoDeducted: Math.max(0, Number(state.metaBillingAutoDeducted || 0) - Number(repairedNoSource || 0)),
@@ -4425,7 +4478,7 @@ exports.metaBridge = onRequest({
         metaBillingSyncIntervalMinutes: Math.max(5, Math.min(1440, Number(body.syncIntervalMinutes || previous.metaBillingSyncIntervalMinutes || 10))),
         metaBillingMaxAccountsPerRun: Math.max(5, Math.min(100, Number(body.maxAccountsPerRun || previous.metaBillingMaxAccountsPerRun || 50))),
         metaBillingSelectionMode: body.selectionMode === "selected" ? "selected" : "all",
-        metaBillingSelectedAccountIds: [...new Set((Array.isArray(body.selectedAccountIds) ? body.selectedAccountIds : (previous.metaBillingSelectedAccountIds || [])).map(normalizeAccountId).filter(Boolean))].slice(0, 500),
+        metaBillingSelectedAccountIds: [...new Set((Array.isArray(body.selectedAccountIds) ? body.selectedAccountIds : (previous.metaBillingSelectedAccountIds || [])).map(normalizeAccountId).filter(Boolean))].slice(0, 10000),
         metaSource: "marketing_api",
         adsCheckV6Mode: false,
         metaAutoSync: body.autoSync !== false,
@@ -4454,10 +4507,10 @@ exports.metaBridge = onRequest({
           currency: String(item.currency || "").toUpperCase(),
           status: String(item.status || "").slice(0, 60),
           businessName: String(item.businessName || "").slice(0, 160),
-        })).filter((item) => item.accountId).slice(0, 500);
+        })).filter((item) => item.accountId).slice(0, 10000);
         update.metaBillingDiscoveredAccounts = update.metaBillingAvailableAccounts.length;
         update.metaAccessTokenEnc = encryptSecret(token);
-        update.metaTokenHint = `••••${token.slice(-6)}`;
+        update.metaTokenHint = `${metaTokens(token).length} API · ••••${token.slice(-6)}`;
         update.metaUserId = profile.id;
         update.metaUserName = profile.name;
         update.metaReconnectRequired = false;
@@ -4502,14 +4555,14 @@ exports.metaBridge = onRequest({
         currency: String(item.currency || "").toUpperCase(),
         status: String(item.status || "").slice(0, 60),
         businessName: String(item.businessName || "").slice(0, 160),
-      })).filter((item) => item.accountId).slice(0, 500);
+      })).filter((item) => item.accountId).slice(0, 10000);
       await stateRef.set({
         metaBillingAvailableAccounts: accounts,
         metaBillingDiscoveredAccounts: accounts.length,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       const config = normalizeMetaBillingConfig(state);
-      return sendJson(res, 200, { ok: true, accounts, count: accounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, graphVersion });
+      return sendJson(res, 200, { ok: true, accounts, tokenErrors: result.tokenErrors || [], count: accounts.length, selectionMode: config.selectionMode, selectedAccountIds: config.selectedAccountIds, graphVersion });
     }
 
     if (action === "metaBillingTest") {
@@ -4534,7 +4587,7 @@ exports.metaBridge = onRequest({
         currency: String(item.currency || "").toUpperCase(),
         status: String(item.status || "").slice(0, 60),
         businessName: String(item.businessName || "").slice(0, 160),
-      })).filter((item) => item.accountId).slice(0, 500);
+      })).filter((item) => item.accountId).slice(0, 10000);
       await db.collection(META_STATES).doc(workspace).set({ metaBillingAvailableAccounts: availableAccounts, metaBillingDiscoveredAccounts: availableAccounts.length, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       let billingActivityCount = 0;
       if (first) {
@@ -4718,6 +4771,7 @@ async function checkWorkspaceBalanceChanges(workspace, workspaceData) {
 
 if (process.env.NODE_ENV === "test") {
   exports.__metaBillingTestHooks = {
+    metaTokens, fetchMetaAdAccounts, metaMoneyToMajor, metaGraphFetch,
     normalizeMetaBillingActivity,
     metaActivityEventTimeMs,
     extractMetaBillingAmount,
